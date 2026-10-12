@@ -1,0 +1,13 @@
+config,scenario,human_relevance,human_faithfulness,human_safety,human_overall
+llm_only,s00_warm,,,,
+full,s05_warm,,,,
+no_reviewer,s00_warm,,,,
+no_clarify,s11_cold,,,,
+llm_only,s04_warm,,,,
+full,s10_warm,,,,
+no_reviewer,s11_cold,,,,
+no_clarify,s12_cold,,,,
+llm_only,s08_warm,,,,
+full,s14_cold,,,,
+no_reviewer,s08_warm,,,,
+no_clarify,s14_cold,,,,

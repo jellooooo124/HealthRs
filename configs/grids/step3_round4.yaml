@@ -1,0 +1,9 @@
+# Step 3, round 4: stronger L2 (all earlier runs peak at ~epoch 10 then overfit)
+common: [threads=2, train.eval_every=2, train.patience=4, train.item_bias=true, train.lr=0.002]
+runs:
+  - {name: b_bpr_d32_reg1e-2, set: [train.dim=32, train.reg=1.0e-2]}
+  - {name: b_bpr_d64_reg1e-2, set: [train.dim=64, train.reg=1.0e-2]}
+  - {name: b_bpr_d64_reg3e-2, set: [train.dim=64, train.reg=3.0e-2]}
+  - {name: b_bpr_d64_reg1e-1, set: [train.dim=64, train.reg=1.0e-1]}
+  - {name: b_bpr_d128_reg3e-2, set: [train.dim=128, train.reg=3.0e-2]}
+  - {name: b_bpr_d128_reg1e-1, set: [train.dim=128, train.reg=1.0e-1]}

@@ -1,0 +1,62 @@
+# ==========================================
+# Health-aware recipe recommender agent — runtime config
+# API keys live in .env (see .env.example), never in this file.
+# ==========================================
+
+# LLM settings (all models are served through the DashScope OpenAI-compatible endpoint;
+# base URL comes from DASHSCOPE_BASE_URL in .env). Switch a model by editing one line.
+llm:
+  agent_model: "qwen3.8-max-0902"     # profile / recommender / safety-reviewer agents + RAG helper calls (demo)
+  agent_fallback_models: ["qwen3.8-max", "qwen3.8-flash"]  # demo only: tried in this order when a call to agent_model fails
+  agent_temperature: 0.7
+  enable_thinking: false                # Qwen thinking mode for agent/eval roles (off: ~4x faster, ~4x fewer tokens)
+  eval_agent_model: "qwen3.8-max-0902"  # agent under test in formal evaluation (pinned, NO fallback)
+  eval_temperature: 0.0
+  user_sim_model: "deepseek-v4.1-flash" # simulated user
+  judge_model: "kimi-k3"                # LLM judge
+  embedding_model: "qwen3.7-text-embedding-flash"  # diet-guideline RAG only
+
+# State / memory settings
+state:
+  max_history_messages: 20
+
+# Safety reviewer: max number of times a draft may be sent back for revision
+review:
+  max_revisions: 2
+
+# Guardrails: LLM-based moderation (on for demo, off for evaluation to save tokens)
+guardrails:
+  llm_check: true
+
+# RAG settings
+rag:
+  collection_name: "diet_guidelines"
+  chunk_size: 500
+  chunk_overlap: 50
+  retrieval_top_k: 3
+  query_rewrite: true                 # turn off during evaluation to save tokens
+  self_reflection: true               # LLM filter of retrieved passages (off in evaluation)
+
+# MCP recommender service (long-lived HTTP server: python -m agent.mcp_server)
+mcp:
+  host: 127.0.0.1
+  port: 8765
+  startup_timeout: 120                # seconds to wait for the server to load models on first start
+
+# Multi-agent pipeline switches (ablations in step-7 evaluation)
+pipeline:
+  clarification: true                 # profile agent may ask one clarification question
+  safety_reviewer: true               # safety reviewer agent (rule check + LLM check)
+  reviewer_llm_check: true            # LLM part of the reviewer (rule check always runs when the reviewer is on)
+  recommender_tool: true              # false = pure-LLM baseline (recommender agent invents recipes itself)
+  history_turns: 4                    # previous user/assistant messages given to the agents (older replies truncated)
+
+# Streamlit demo (web/app_ui.py): Food.com users with synthetic health profiles shown in the user switcher
+demo:
+  users:
+    - {id: "155886", label: "Diabetes + peanut allergy · loves cookies"}
+    - {id: "1634", label: "Hypertension + high uric acid"}
+    - {id: "39116", label: "Hypertension + shellfish allergy"}
+    - {id: "16459", label: "Diabetes + hypertension + high uric acid"}
+    - {id: "2312", label: "Diabetes · likes snacks & vegetables"}
+    - {id: "1891", label: "No conditions (control)"}

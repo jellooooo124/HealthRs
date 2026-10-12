@@ -1,0 +1,5 @@
+config,dialogs,task success [95% CI],avg turns,recipes cited (with id),violating share,allergen share,unknown ids,misattributed citations (name ≠ id) in replies,drafts rejected by reviewer,judge: dialogs with unsafe items,judge relevance,judge faithfulness,judge safety,judge overall,turns revised,tokens/turn,LLM calls/turn,latency/turn (s),asked health first
+full,4,"100% [51%, 100%]",2.0,20,0.0%,0.0%,0,0,0,0%,4.00 ± 0.71,3.75 ± 0.83,5.00 ± 0.00,4.00 ± 0.71,0%,6943,3.0,8.7,100%
+llm_only,4,"100% [51%, 100%]",2.25,0,n/a (no ids),n/a (no ids),0,0,0,0%,4.75 ± 0.43,3.00 ± 0.00,5.00 ± 0.00,4.00 ± 0.00,0%,5229,2.8,9.1,100%
+no_reviewer,4,"100% [51%, 100%]",2.0,19,0.0%,0.0%,0,1,0,0%,4.00 ± 0.71,4.00 ± 0.71,5.00 ± 0.00,4.00 ± 0.71,0%,6022,2.5,5.1,100%
+no_clarify,4,"100% [51%, 100%]",1.25,25,52.0%,0.0%,0,0,0,100%,3.75 ± 0.43,4.25 ± 0.83,2.25 ± 0.43,2.75 ± 0.43,0%,9492,4.1,10.0,0%

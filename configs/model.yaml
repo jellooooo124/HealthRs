@@ -1,0 +1,34 @@
+# Recommender config (scripts/train.py). Any key can be overridden on the command line: --set train.dim=128
+seed: 2026
+device: cpu                    # cpu | mps (cpu is faster for this small model; see step-3 benchmark)
+threads: 3                     # torch intra-op threads per process (several runs share the CPU)
+
+train:
+  dim: 64
+  item_bias: false             # item bias b_i in x_ui = p_u·q_i + b_i
+  lr: 0.001
+  reg: 1.0e-5                  # L2 on the batch's user/item vectors
+  batch_size: 4096
+  max_epochs: 150
+  eval_every: 5
+  patience: 3                  # evaluations without val NDCG@10 improvement before stopping
+
+health:
+  use_features: false          # adaptation A: item = ID + W·nutrition, user = ID + Σ condition embeddings
+  lambda_h: 0.0                # adaptation B: weight of the health pairwise loss
+  health_neg: uniform          # uniform: random compliant vs random violating item; hard: violating item = the BPR positive
+
+eval:
+  k: 10
+  chunk_users: 1024
+
+retrieval:                     # two-stage recommender (src/models/retrieval.py)
+  taste_n: 200                 # channel 1: top-N of the plain BPR-MF model
+  healthy_n: 100               # channel 2: most popular recipes compliant with the user's conditions
+  max_per_category: 3          # rerank diversity: at most this many recipes per RecipeCategory in the top-K
+  health_penalty: 10.0         # ranking: score − β·violates; large β = compliant recipes always first (violating only as fallback)
+  pop_alpha: 0.25              # popularity calibration: z(model score) + α·z(log popularity); α chosen on val (step 4)
+
+serving:                       # checkpoints used by the agent's recommend_recipes tool and the demo (outputs/checkpoints/)
+  taste_checkpoint: f_bpr_s2026      # retrieval channel 1 (plain BPR-MF)
+  ranker_checkpoint: f_hA_s2026      # ranking (BPR-MF + adaptation A)

@@ -1,0 +1,5 @@
+Split,Interactions,Users
+Train,"597,481","19,455"
+Validation (2nd-last positive),"19,455","19,455"
+Test (last positive),"19,455","19,455"
+Cold-start test,"3,929","3,000"

@@ -1,0 +1,4 @@
+Condition,Rule (per serving),Compliant: all clean recipes,Compliant: catalog,Compliant: positive interactions
+Diabetes,Carbohydrate <= 60; Sugar <= 27,74.7%,77.9%,78.3%
+Hypertension,Sodium <= 500; SaturatedFat <= 6,42.2%,43.3%,41.4%
+Hyperuricemia,Sugar <= 27; no high-purine; no alcohol; no hfcs,75.0%,79.1%,79.7%

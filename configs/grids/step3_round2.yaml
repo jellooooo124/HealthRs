@@ -1,0 +1,19 @@
+# Step 3, round 2: finer BPR-MF tuning + health variants (A / B / A+B) at the round-1 best setting
+common: [threads=2, train.eval_every=2, train.patience=4]
+runs:
+  # --- plain BPR-MF, extended search (smaller / slower / more regularised)
+  - {name: bpr_d32_lr2e-3_reg1e-5,  set: [train.dim=32, train.lr=0.002, train.reg=1.0e-5]}
+  - {name: bpr_d32_lr1e-3_reg1e-5,  set: [train.dim=32, train.lr=0.001, train.reg=1.0e-5]}
+  - {name: bpr_d64_lr1e-3_reg1e-5,  set: [train.dim=64, train.lr=0.001, train.reg=1.0e-5]}
+  - {name: bpr_d64_lr1e-3_reg1e-4,  set: [train.dim=64, train.lr=0.001, train.reg=1.0e-4]}
+  - {name: bpr_d64_lr2e-3_reg1e-3,  set: [train.dim=64, train.lr=0.002, train.reg=1.0e-3]}
+  - {name: bpr_d64_lr5e-4_reg1e-5,  set: [train.dim=64, train.lr=0.0005, train.reg=1.0e-5]}
+  # --- health variants (dim 64, lr 2e-3, reg 1e-5 = round-1 best)
+  - {name: hA,              set: [train.lr=0.002, health.use_features=true]}
+  - {name: hB_l0.3,         set: [train.lr=0.002, health.lambda_h=0.3]}
+  - {name: hAB_l0.1,        set: [train.lr=0.002, health.use_features=true, health.lambda_h=0.1]}
+  - {name: hAB_l0.3,        set: [train.lr=0.002, health.use_features=true, health.lambda_h=0.3]}
+  - {name: hAB_l1,          set: [train.lr=0.002, health.use_features=true, health.lambda_h=1.0]}
+  - {name: hAB_l3,          set: [train.lr=0.002, health.use_features=true, health.lambda_h=3.0]}
+  - {name: hAB_hard_l0.3,   set: [train.lr=0.002, health.use_features=true, health.lambda_h=0.3, health.health_neg=hard]}
+  - {name: hAB_hard_l1,     set: [train.lr=0.002, health.use_features=true, health.lambda_h=1.0, health.health_neg=hard]}

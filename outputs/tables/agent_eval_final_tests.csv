@@ -1,0 +1,4 @@
+comparison,paired dialogs,relevance,faithfulness,safety,overall
+full vs llm_only,15,-0.20 (p=0.465),+1.33 (p=0.001),+0.47 (p=0.008),+0.33 (p=0.096)
+full vs no_reviewer,15,-0.07 (p=0.655),-0.13 (p=0.480),+0.00 (p=1.000),-0.13 (p=0.317)
+full vs no_clarify,4,+0.25 (p=1.000),-0.50 (p=1.000),+2.75 (p=0.125),+1.25 (p=0.125)

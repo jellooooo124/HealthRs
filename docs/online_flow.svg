@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1176" viewBox="0 0 960 1176" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#888780" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<rect x="0" y="0" width="960" height="1176" rx="16" fill="#FAFAF8"/>
+<rect x="150" y="342" width="500" height="398" rx="14" fill="none" stroke="#B4B2A9" stroke-width="1" stroke-dasharray="6 5"/>
+<text x="636" y="366" text-anchor="end" font-size="13.5" fill="#5F5E5A">Recommender tool (MCP)</text>
+<rect x="180" y="24" width="440" height="56" rx="10" fill="#FFFFFF" stroke="#D3D1C7" stroke-width="1"/>
+<text x="400.0" y="58.0" text-anchor="middle" font-size="16" font-weight="600" fill="#2C2C2A">User: natural-language request</text>
+<rect x="180" y="120" width="440" height="76" rx="10" fill="#EEEDFE" stroke="#7F77DD" stroke-width="1"/>
+<text x="400.0" y="150" text-anchor="middle" font-size="16" font-weight="600" fill="#3C3489">① Understand the request, build the profile</text>
+<text x="400.0" y="174" text-anchor="middle" font-size="13.5" fill="#534AB7">extract conditions, goals and allergies as JSON</text>
+<rect x="665" y="120" width="270" height="76" rx="10" fill="#EEEDFE" stroke="#7F77DD" stroke-width="1"/>
+<text x="800.0" y="150" text-anchor="middle" font-size="16" font-weight="600" fill="#3C3489">② Ask if information is missing</text>
+<text x="800.0" y="174" text-anchor="middle" font-size="13.5" fill="#534AB7">e.g. any food allergies?</text>
+<rect x="180" y="236" width="440" height="76" rx="10" fill="#EEEDFE" stroke="#7F77DD" stroke-width="1"/>
+<text x="400.0" y="266" text-anchor="middle" font-size="16" font-weight="600" fill="#3C3489">③ Call the recommender tool</text>
+<text x="400.0" y="290" text-anchor="middle" font-size="13.5" fill="#534AB7">user, profile, constraints, k</text>
+<rect x="180" y="380" width="440" height="96" rx="10" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1"/>
+<text x="400.0" y="408" text-anchor="middle" font-size="16" font-weight="600" fill="#085041">④ Health-aware scoring</text>
+<text x="400.0" y="432" text-anchor="middle" font-size="13.5" fill="#0F6E56">retrieve ~300 candidates, then BPR-MF</text>
+<text x="400.0" y="453" text-anchor="middle" font-size="13.5" fill="#0F6E56">+ nutrition + conditions (adaptation A)</text>
+<rect x="665" y="390" width="270" height="76" rx="10" fill="#FFFFFF" stroke="#D3D1C7" stroke-width="1"/>
+<text x="800.0" y="420" text-anchor="middle" font-size="16" font-weight="600" fill="#2C2C2A">Offline-trained models</text>
+<text x="800.0" y="444" text-anchor="middle" font-size="13.5" fill="#5F5E5A">see the offline results</text>
+<rect x="180" y="516" width="440" height="76" rx="10" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1"/>
+<text x="400.0" y="546" text-anchor="middle" font-size="16" font-weight="600" fill="#085041">⑤ Safety hard filter</text>
+<text x="400.0" y="570" text-anchor="middle" font-size="13.5" fill="#0F6E56">allergens 100% removed, compliant recipes first</text>
+<rect x="180" y="632" width="440" height="76" rx="10" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1"/>
+<text x="400.0" y="662" text-anchor="middle" font-size="16" font-weight="600" fill="#085041">⑥ Take the top-K</text>
+<text x="400.0" y="686" text-anchor="middle" font-size="13.5" fill="#0F6E56">with per-serving nutrition and compliance</text>
+<rect x="180" y="780" width="440" height="96" rx="10" fill="#EEEDFE" stroke="#7F77DD" stroke-width="1"/>
+<text x="400.0" y="808" text-anchor="middle" font-size="16" font-weight="600" fill="#3C3489">⑦ Generate recommendations and explanations</text>
+<text x="400.0" y="832" text-anchor="middle" font-size="13.5" fill="#534AB7">cites only data returned by the tool,</text>
+<text x="400.0" y="853" text-anchor="middle" font-size="13.5" fill="#534AB7">checked by the safety reviewer agent</text>
+<rect x="665" y="790" width="270" height="76" rx="10" fill="#FFFFFF" stroke="#D3D1C7" stroke-width="1"/>
+<text x="800.0" y="820" text-anchor="middle" font-size="16" font-weight="600" fill="#2C2C2A">RAG knowledge base</text>
+<text x="800.0" y="844" text-anchor="middle" font-size="13.5" fill="#5F5E5A">diet guidelines, nutrition evidence</text>
+<rect x="180" y="916" width="440" height="56" rx="10" fill="#FFFFFF" stroke="#D3D1C7" stroke-width="1"/>
+<text x="400.0" y="950.0" text-anchor="middle" font-size="16" font-weight="600" fill="#2C2C2A">User: views the recommendations and gives feedback</text>
+<rect x="180" y="1012" width="440" height="76" rx="10" fill="#EEEDFE" stroke="#7F77DD" stroke-width="1"/>
+<text x="400.0" y="1042" text-anchor="middle" font-size="16" font-weight="600" fill="#3C3489">⑧ Process the feedback</text>
+<text x="400.0" y="1066" text-anchor="middle" font-size="13.5" fill="#534AB7">update profile and memory</text>
+<path d="M400.0 80 L400.0 118" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M400.0 196 L400.0 234" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M400.0 312 L400.0 378" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M400.0 476 L400.0 514" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M400.0 592 L400.0 630" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M400.0 708 L400.0 778" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M400.0 876 L400.0 914" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M400.0 972 L400.0 1010" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M620 158 L663 158" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M800.0 120 L800.0 52 L622 52" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M665 428 L622 428" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M665 828 L622 828" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M180 1050 L118 1050 L118 274 L178 274" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="104" y="662" text-anchor="middle" font-size="14" fill="#444441" transform="rotate(-90 104 662)">Re-recommend with the updated profile</text>
+<rect x="215" y="1115" width="16" height="16" rx="4" fill="#EEEDFE" stroke="#7F77DD"/>
+<text x="239" y="1128" font-size="14" fill="#444441">LLM / agent</text>
+<rect x="405" y="1115" width="16" height="16" rx="4" fill="#E1F5EE" stroke="#1D9E75"/>
+<text x="429" y="1128" font-size="14" fill="#444441">Recommender model</text>
+<rect x="615" y="1115" width="16" height="16" rx="4" fill="#FFFFFF" stroke="#D3D1C7"/>
+<text x="639" y="1128" font-size="14" fill="#444441">User and data</text>
+</svg>

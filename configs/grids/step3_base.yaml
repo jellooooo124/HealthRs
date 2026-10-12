@@ -1,0 +1,10 @@
+# Step 3, round 1: tune plain BPR-MF on validation NDCG@10
+runs:
+  - {name: bpr_d64_lr2e-3_reg1e-5,  set: [train.dim=64,  train.lr=0.002, train.reg=1.0e-5]}
+  - {name: bpr_d64_lr5e-3_reg1e-5,  set: [train.dim=64,  train.lr=0.005, train.reg=1.0e-5]}
+  - {name: bpr_d64_lr2e-3_reg1e-4,  set: [train.dim=64,  train.lr=0.002, train.reg=1.0e-4]}
+  - {name: bpr_d64_lr5e-3_reg1e-4,  set: [train.dim=64,  train.lr=0.005, train.reg=1.0e-4]}
+  - {name: bpr_d128_lr2e-3_reg1e-5, set: [train.dim=128, train.lr=0.002, train.reg=1.0e-5]}
+  - {name: bpr_d128_lr5e-3_reg1e-5, set: [train.dim=128, train.lr=0.005, train.reg=1.0e-5]}
+  - {name: bpr_d128_lr2e-3_reg1e-4, set: [train.dim=128, train.lr=0.002, train.reg=1.0e-4]}
+  - {name: bpr_d128_lr5e-3_reg1e-4, set: [train.dim=128, train.lr=0.005, train.reg=1.0e-4]}

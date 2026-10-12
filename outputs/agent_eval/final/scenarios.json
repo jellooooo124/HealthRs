@@ -1,0 +1,343 @@
+[
+  {
+    "id": "s00_warm",
+    "kind": "warm",
+    "source_user": "290985",
+    "conditions": [
+      "hyperuricemia"
+    ],
+    "allergies": [
+      "peanut"
+    ],
+    "taste": [
+      "Breads",
+      "Lunch/Snacks",
+      "One Dish Meal"
+    ],
+    "liked_recipes": [
+      "Stove-Top Zucchini and Ground Beef Skillet",
+      "Baked Latkes",
+      "Pantry Tomato Beef Soup"
+    ],
+    "dislike": "spinach",
+    "time_limit": 30,
+    "task": "dinner",
+    "opener": "Can you suggest a dinner I could cook tonight?",
+    "meal": "a dinner main dish"
+  },
+  {
+    "id": "s01_warm",
+    "kind": "warm",
+    "source_user": "1872810",
+    "conditions": [
+      "hypertension",
+      "hyperuricemia"
+    ],
+    "allergies": [
+      "soy"
+    ],
+    "taste": [
+      "One Dish Meal",
+      "Lunch/Snacks",
+      "Cheese"
+    ],
+    "liked_recipes": [
+      "All-American Hamburgers",
+      "Kielbasa With Tomatoes and White Beans",
+      "Stardust Chocolate Pancakes"
+    ],
+    "dislike": "olives",
+    "time_limit": 60,
+    "task": "breakfast",
+    "opener": "I need some breakfast ideas for this week.",
+    "meal": "breakfast"
+  },
+  {
+    "id": "s02_warm",
+    "kind": "warm",
+    "source_user": "619733",
+    "conditions": [
+      "diabetes"
+    ],
+    "allergies": [
+      "shellfish"
+    ],
+    "taste": [
+      "Chicken Breast",
+      "Chicken",
+      "Lunch/Snacks"
+    ],
+    "liked_recipes": [
+      "Collard Greens - It's Good for You!",
+      "Cheese and Broccoli Stuffed Chicken Breast",
+      "Baked Parmesan Fish"
+    ],
+    "dislike": "mushrooms",
+    "time_limit": 45,
+    "task": "sweet",
+    "opener": "I'm craving something sweet. Any ideas?",
+    "meal": "a dessert or sweet snack"
+  },
+  {
+    "id": "s03_warm",
+    "kind": "warm",
+    "source_user": "205100",
+    "conditions": [
+      "hypertension",
+      "diabetes"
+    ],
+    "allergies": [
+      "shellfish"
+    ],
+    "taste": [
+      "Vegetable",
+      "Dessert",
+      "Potato"
+    ],
+    "liked_recipes": [
+      "Zesty Oven Baked Fries",
+      "Frosting for Sugar Cookies",
+      "Wet Burrito Casserole"
+    ],
+    "dislike": "eggplant",
+    "time_limit": 45,
+    "task": "lunch_chicken",
+    "opener": "What could I make for lunch with chicken?",
+    "meal": "a lunch dish with chicken"
+  },
+  {
+    "id": "s04_warm",
+    "kind": "warm",
+    "source_user": "523286",
+    "conditions": [
+      "hypertension",
+      "hyperuricemia"
+    ],
+    "allergies": [],
+    "taste": [
+      "One Dish Meal",
+      "Dessert",
+      "Breads"
+    ],
+    "liked_recipes": [
+      "Make Ahead Omelet",
+      "Grilled Honey Garlic Pork Chops",
+      "Flour Tortillas"
+    ],
+    "dislike": "coconut",
+    "time_limit": 60,
+    "task": "dinner",
+    "opener": "Can you suggest a dinner I could cook tonight?",
+    "meal": "a dinner main dish"
+  },
+  {
+    "id": "s05_warm",
+    "kind": "warm",
+    "source_user": "230648",
+    "conditions": [
+      "diabetes"
+    ],
+    "allergies": [],
+    "taste": [
+      "Dessert",
+      "Meat",
+      "Tilapia"
+    ],
+    "liked_recipes": [
+      "Yes, Virginia There is a Great Meatloaf",
+      "Simply Delicious Carrot Cake",
+      "Yummy Bread Pudding"
+    ],
+    "dislike": "coconut",
+    "time_limit": 30,
+    "task": "breakfast",
+    "opener": "I need some breakfast ideas for this week.",
+    "meal": "breakfast"
+  },
+  {
+    "id": "s06_warm",
+    "kind": "warm",
+    "source_user": "347160",
+    "conditions": [
+      "diabetes"
+    ],
+    "allergies": [],
+    "taste": [
+      "Beverages",
+      "Bar Cookie",
+      "Chicken"
+    ],
+    "liked_recipes": [
+      "Our Daily Bread in a Crock - Weekly Make and Bake Rustic Bread",
+      "Fool's Salt  - Sel Fou  -  French Style Seasoning Salt",
+      "Cheddar Cheese and Chutney Toasted Doorstep Sandwich!"
+    ],
+    "dislike": "cilantro",
+    "time_limit": 60,
+    "task": "sweet",
+    "opener": "I'm craving something sweet. Any ideas?",
+    "meal": "a dessert or sweet snack"
+  },
+  {
+    "id": "s07_warm",
+    "kind": "warm",
+    "source_user": "55927",
+    "conditions": [
+      "hypertension"
+    ],
+    "allergies": [],
+    "taste": [
+      "Dessert",
+      "Drop Cookies",
+      "Lunch/Snacks"
+    ],
+    "liked_recipes": [
+      "Chicken Parmesan",
+      "Oven-Fried Chicken Chimichangas",
+      "Awesome Baked Ham"
+    ],
+    "dislike": "spinach",
+    "time_limit": 30,
+    "task": "lunch_chicken",
+    "opener": "What could I make for lunch with chicken?",
+    "meal": "a lunch dish with chicken"
+  },
+  {
+    "id": "s08_warm",
+    "kind": "warm",
+    "source_user": "124945",
+    "conditions": [
+      "hypertension",
+      "diabetes"
+    ],
+    "allergies": [],
+    "taste": [
+      "Pork",
+      "Chicken Breast",
+      "Tilapia"
+    ],
+    "liked_recipes": [
+      "Jagerschnitzel",
+      "D's Roasted Butternut Squash",
+      "Meatballs"
+    ],
+    "dislike": "eggplant",
+    "time_limit": 30,
+    "task": "dinner",
+    "opener": "Can you suggest a dinner I could cook tonight?",
+    "meal": "a dinner main dish"
+  },
+  {
+    "id": "s09_warm",
+    "kind": "warm",
+    "source_user": "67395",
+    "conditions": [
+      "hypertension",
+      "hyperuricemia"
+    ],
+    "allergies": [],
+    "taste": [
+      "Beverages",
+      "Dessert",
+      "Vegetable"
+    ],
+    "liked_recipes": [
+      "Steak Marinade",
+      "Mrs. Fields Chocolate Chip Cookies",
+      "The Ultimate Lemon Meringue Pie"
+    ],
+    "dislike": "spinach",
+    "time_limit": 30,
+    "task": "breakfast",
+    "opener": "I need some breakfast ideas for this week.",
+    "meal": "breakfast"
+  },
+  {
+    "id": "s10_warm",
+    "kind": "warm",
+    "source_user": "788554",
+    "conditions": [
+      "hypertension"
+    ],
+    "allergies": [],
+    "taste": [
+      "Lunch/Snacks",
+      "Yeast Breads",
+      "Potato"
+    ],
+    "liked_recipes": [
+      "Ketjap Manis",
+      "Newfoundland Cod Cakes",
+      "Yummy Crispy Baked Fish"
+    ],
+    "dislike": "tofu",
+    "time_limit": 60,
+    "task": "sweet",
+    "opener": "I'm craving something sweet. Any ideas?",
+    "meal": "a dessert or sweet snack"
+  },
+  {
+    "id": "s11_cold",
+    "kind": "cold",
+    "source_user": "58518",
+    "conditions": [
+      "hypertension"
+    ],
+    "allergies": [],
+    "taste": [],
+    "liked_recipes": [],
+    "dislike": "cilantro",
+    "time_limit": 45,
+    "task": "lunch_chicken",
+    "opener": "What could I make for lunch with chicken?",
+    "meal": "a lunch dish with chicken"
+  },
+  {
+    "id": "s12_cold",
+    "kind": "cold",
+    "source_user": "2002002765",
+    "conditions": [
+      "hypertension"
+    ],
+    "allergies": [],
+    "taste": [],
+    "liked_recipes": [],
+    "dislike": "pork",
+    "time_limit": 30,
+    "task": "dinner",
+    "opener": "Can you suggest a dinner I could cook tonight?",
+    "meal": "a dinner main dish"
+  },
+  {
+    "id": "s13_cold",
+    "kind": "cold",
+    "source_user": "1915840",
+    "conditions": [
+      "hypertension"
+    ],
+    "allergies": [],
+    "taste": [],
+    "liked_recipes": [],
+    "dislike": "cilantro",
+    "time_limit": 30,
+    "task": "breakfast",
+    "opener": "I need some breakfast ideas for this week.",
+    "meal": "breakfast"
+  },
+  {
+    "id": "s14_cold",
+    "kind": "cold",
+    "source_user": "2002766882",
+    "conditions": [
+      "hypertension"
+    ],
+    "allergies": [],
+    "taste": [],
+    "liked_recipes": [],
+    "dislike": "mushrooms",
+    "time_limit": 45,
+    "task": "sweet",
+    "opener": "I'm craving something sweet. Any ideas?",
+    "meal": "a dessert or sweet snack"
+  }
+]

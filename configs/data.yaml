@@ -1,0 +1,26 @@
+# Data pipeline config (scripts/prepare_data.py). All paths are relative to the project root.
+seed: 2026
+
+paths:
+  raw_dir: data/raw/foodcom
+  processed_dir: data/processed
+
+ratings:
+  positive_threshold: 4      # rating >= 4 -> positive (implicit feedback)
+  drop_zero: true            # 0 = review without a star rating on Food.com -> treated as missing
+
+cleaning:                    # per-serving nutrition sanity filters, applied before k-core
+  min_calories: 0            # exclusive: drop recipes with 0 kcal (missing nutrition)
+  max_calories: 5000         # drop implausible portions (> 5000 kcal per serving)
+  sodium_quantile: 0.999     # drop sodium above this quantile (data-entry errors)
+
+kcore: 5                     # iterative k-core on positive interactions (users and items)
+
+split:
+  method: temporal_leave_one_out   # last positive -> test, second last -> val, rest -> train
+
+cold_start:
+  n_users: 3000              # sampled users outside the k-core whose positives hit catalog items
+
+sample:                      # small subset shipped with the repo (data/sample/)
+  n_users: 500

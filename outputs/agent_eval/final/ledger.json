@@ -1,0 +1,18 @@
+{
+  "qwen3.8-max-0902": {
+    "calls": 193,
+    "tokens": 432916
+  },
+  "deepseek-v4.1-flash": {
+    "calls": 64,
+    "tokens": 62423
+  },
+  "?": {
+    "calls": 45,
+    "tokens": 87116
+  },
+  "kimi-k3": {
+    "calls": 52,
+    "tokens": 215245
+  }
+}

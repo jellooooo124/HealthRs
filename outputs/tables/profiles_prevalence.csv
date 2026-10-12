@@ -1,0 +1,14 @@
+Attribute,Target prevalence,Realised
+Hypertension,48.1%,48.0%
+Diabetes,14.7%,15.2%
+Hyperuricemia,20.1%,20.2%
+>= 1 condition,-,64.8%
+Allergy: shellfish,2.9%,1.95%
+Allergy: milk,1.9%,0.08%
+Allergy: peanut,1.8%,1.09%
+Allergy: tree nut,1.2%,0.47%
+Allergy: fish,0.9%,0.40%
+Allergy: egg,0.8%,0.08%
+Allergy: wheat,0.8%,0.03%
+Allergy: soy,0.6%,0.26%
+Allergy: sesame,0.2%,0.10%

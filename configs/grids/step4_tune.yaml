@@ -1,0 +1,19 @@
+# Step 4, phase 1: equal-budget tuning of BPR-MF and adaptation A (selected by val NDCG@10 with coverage@10 >= 1%)
+common: [threads=2, train.eval_every=2, train.patience=4, train.item_bias=true, train.lr=0.002]
+runs:
+  - {name: t_bpr_d32_reg1e-4, set: [train.dim=32, train.reg=1.0e-4]}
+  - {name: t_bpr_d32_reg1e-3, set: [train.dim=32, train.reg=1.0e-3]}
+  - {name: t_bpr_d32_reg1e-2, set: [train.dim=32, train.reg=1.0e-2]}
+  - {name: t_bpr_d32_reg3e-2, set: [train.dim=32, train.reg=3.0e-2]}
+  - {name: t_bpr_d64_reg1e-4, set: [train.dim=64, train.reg=1.0e-4]}
+  - {name: t_bpr_d64_reg1e-3, set: [train.dim=64, train.reg=1.0e-3]}
+  - {name: t_bpr_d64_reg1e-2, set: [train.dim=64, train.reg=1.0e-2]}
+  - {name: t_bpr_d64_reg3e-2, set: [train.dim=64, train.reg=3.0e-2]}
+  - {name: t_hA_d32_reg1e-4, set: [train.dim=32, train.reg=1.0e-4, health.use_features=true]}
+  - {name: t_hA_d32_reg1e-3, set: [train.dim=32, train.reg=1.0e-3, health.use_features=true]}
+  - {name: t_hA_d32_reg1e-2, set: [train.dim=32, train.reg=1.0e-2, health.use_features=true]}
+  - {name: t_hA_d32_reg3e-2, set: [train.dim=32, train.reg=3.0e-2, health.use_features=true]}
+  - {name: t_hA_d64_reg1e-4, set: [train.dim=64, train.reg=1.0e-4, health.use_features=true]}
+  - {name: t_hA_d64_reg1e-3, set: [train.dim=64, train.reg=1.0e-3, health.use_features=true]}
+  - {name: t_hA_d64_reg1e-2, set: [train.dim=64, train.reg=1.0e-2, health.use_features=true]}
+  - {name: t_hA_d64_reg3e-2, set: [train.dim=64, train.reg=3.0e-2, health.use_features=true]}

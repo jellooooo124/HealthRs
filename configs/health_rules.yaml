@@ -1,0 +1,108 @@
+# Health rules: per-serving compliance thresholds, ingredient lists and synthetic-profile prevalences.
+# Every number cites its source (see `sources`). A recipe is NON-compliant for a condition if ANY rule fails.
+
+conditions:
+  diabetes:
+    nutrient_max:                       # per serving
+      CarbohydrateContent: 60           # g  — ADA carb counting: 45–60 g carbohydrate per meal (upper bound)
+      SugarContent: 27                  # g  — UK FoP label: total sugars > 27 g/portion is "high" (red)
+    ingredients_forbidden: []
+  hypertension:
+    nutrient_max:
+      SodiumContent: 500                # mg — ACC/AHA 2017: ideal limit 1500 mg/day ÷ 3 meals
+      SaturatedFatContent: 6            # g  — UK FoP label: saturates > 6 g/portion is "high" (DASH: low sat. fat)
+    ingredients_forbidden: []
+  hyperuricemia:
+    nutrient_max:
+      SugarContent: 27                  # g  — ACR 2020: limit high-fructose corn syrup; UK FoP sugar "high" threshold as proxy
+    ingredients_forbidden: [high_purine, alcohol, hfcs]   # ACR 2020: limit purine intake, alcohol, HFCS
+
+# Ingredient groups, matched as whole words/phrases (case-insensitive) against RecipeIngredientParts.
+# `exclude` phrases are removed from the ingredient string before matching (e.g. "peanut butter" is not dairy).
+ingredient_groups:
+  high_purine:
+    include: [liver, livers, kidney, kidneys, sweetbread, sweetbreads, tripe, giblets, brains, beef heart, chicken hearts,
+              anchovy, anchovies, anchovy paste, sardine, sardines, herring, mackerel, smelt, smelts,
+              mussel, mussels, scallop, scallops, clam, clams, oyster, oysters, shrimp, prawn, prawns,
+              crab, crabmeat, lobster, crawfish, crayfish, venison, goose, marmite, vegemite, yeast extract]
+    exclude: [kidney bean, kidney beans, oyster mushroom, oyster mushrooms, oyster sauce]
+  alcohol:
+    include: [beer, ale, lager, stout, vodka, whiskey, whisky, bourbon, rum, gin, tequila, brandy, liqueur]
+    exclude: [ginger ale, root beer, ginger beer, rum extract, brandy extract]
+  hfcs:
+    include: [high fructose corn syrup, corn syrup, light corn syrup, dark corn syrup]
+    exclude: []
+
+# Allergens (the 9 major US allergens). Hard-filtered for users who list them.
+allergens:
+  shellfish:
+    include: [shrimp, prawn, prawns, crab, crabmeat, lobster, crawfish, crayfish, scallop, scallops, clam, clams,
+              mussel, mussels, oyster, oysters, squid, calamari, octopus, oyster sauce]
+    exclude: [oyster mushroom, oyster mushrooms, oyster crackers, imitation crab]
+  milk:
+    include: [milk, butter, buttermilk, cheese, cream, sour cream, yogurt, yoghurt, whey, ghee, half-and-half,
+              cheddar, parmesan, mozzarella, ricotta, feta, brie, gouda, gruyere, mascarpone, provolone, romano, ice cream]
+    exclude: [coconut milk, almond milk, soy milk, rice milk, oat milk, peanut butter, almond butter, apple butter,
+              cocoa butter, nut butter, cream of tartar, coconut cream, cream of coconut, butternut, butter beans,
+              butterscotch chips, buttercup squash]
+  peanut:
+    include: [peanut, peanuts, peanut butter, peanut oil]
+    exclude: []
+  tree_nut:
+    include: [almond, almonds, walnut, walnuts, pecan, pecans, cashew, cashews, pistachio, pistachios, hazelnut,
+              hazelnuts, macadamia, brazil nuts, pine nut, pine nuts, filbert, filberts, marzipan, praline, nutella,
+              almond extract, almond butter, almond milk]
+    exclude: []
+  fish:
+    include: [fish, salmon, tuna, cod, tilapia, halibut, trout, anchovy, anchovies, sardine, sardines, mackerel, herring,
+              catfish, haddock, snapper, sole, flounder, swordfish, mahi mahi, bass, pollock, fish sauce,
+              worcestershire sauce]
+    exclude: [fish-shaped crackers, goldfish crackers]
+  egg:
+    include: [egg, eggs, egg white, egg whites, egg yolk, egg yolks, mayonnaise, egg noodles, meringue]
+    exclude: [eggplant, eggplants]
+  wheat:
+    include: [flour, all-purpose flour, wheat, whole wheat, bread, breadcrumbs, bread crumbs, pasta, spaghetti, macaroni,
+              noodles, couscous, bulgur, semolina, flour tortilla, flour tortillas, crackers, biscuits, pie crust,
+              puff pastry, phyllo, filo, soy sauce, croutons, panko, cake mix, bisquick]
+    exclude: [rice flour, almond flour, coconut flour, corn flour, cornflour, potato flour, tapioca flour,
+              chickpea flour, oat flour, buckwheat, rice noodles, corn tortilla, corn tortillas, gluten-free]
+  soy:
+    include: [soy, soy sauce, soybean, soybeans, soybean oil, tofu, tempeh, edamame, miso, soy milk, tamari]
+    exclude: []
+  sesame:
+    include: [sesame, sesame seeds, sesame oil, tahini]
+    exclude: []
+
+# Synthetic-profile prevalences (US adults); conditions sampled independently with a fixed seed.
+prevalence:
+  conditions:
+    hypertension: 0.481     # CDC, 2017–Mar 2020 NHANES: 48.1% of adults
+    diabetes: 0.147         # CDC National Diabetes Statistics Report: 14.7% of adults (diagnosed + undiagnosed)
+    hyperuricemia: 0.201    # Chen-Xu et al., Arthritis Rheumatol 2019 (NHANES 2015–16): 20.1%
+  allergies:                # Gupta et al., JAMA Netw Open 2019: convincing food allergy among US adults
+    shellfish: 0.029
+    milk: 0.019
+    peanut: 0.018
+    tree_nut: 0.012
+    fish: 0.009
+    egg: 0.008
+    wheat: 0.008
+    soy: 0.006
+    sesame: 0.002
+
+goals:
+  diabetes: "control blood sugar (limit carbohydrates and sugar)"
+  hypertension: "lower blood pressure (limit sodium and saturated fat)"
+  hyperuricemia: "lower uric acid (avoid high-purine foods, alcohol and fructose)"
+
+sources:
+  ada_carb: "American Diabetes Association, carbohydrate counting guidance (45–60 g carbohydrate per meal)."
+  uk_fop: "UK Department of Health / FSA (2016). Guide to creating a front of pack (FoP) nutrition label for pre-packed products sold through retail outlets."
+  acc_aha_2017: "Whelton P.K. et al. (2018). 2017 ACC/AHA Guideline for the Prevention, Detection, Evaluation, and Management of High Blood Pressure in Adults. Hypertension 71(6)."
+  acr_2020: "FitzGerald J.D. et al. (2020). 2020 American College of Rheumatology Guideline for the Management of Gout. Arthritis Care & Research 72(6)."
+  who_sugar_2015: "WHO (2015). Guideline: Sugars intake for adults and children."
+  cdc_htn: "CDC. Hypertension prevalence among adults, NHANES 2017–March 2020."
+  cdc_diabetes: "CDC. National Diabetes Statistics Report."
+  chenxu_2019: "Chen-Xu M. et al. (2019). Contemporary prevalence of gout and hyperuricemia in the United States and decadal trends: NHANES 2007–2016. Arthritis & Rheumatology 71(6)."
+  gupta_2019: "Gupta R.S. et al. (2019). Prevalence and severity of food allergies among US adults. JAMA Network Open 2(1)."

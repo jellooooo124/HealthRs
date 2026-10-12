@@ -1,0 +1,24 @@
+# Small-sample data config (scripts/reproduce.sh --sample): same pipeline on data/sample/, a ~500-user
+# extract of Food.com built by scripts/make_sample.py. Results are NOT comparable to the report.
+seed: 2026
+
+paths:
+  raw_dir: data/sample
+  processed_dir: data/processed_sample
+
+ratings:
+  positive_threshold: 4
+  drop_zero: true
+
+cleaning:
+  min_calories: 0
+  max_calories: 5000
+  sodium_quantile: 0.999
+
+kcore: 5
+
+split:
+  method: temporal_leave_one_out
+
+cold_start:
+  n_users: 300

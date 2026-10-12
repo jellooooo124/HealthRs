@@ -1,0 +1,11 @@
+# Step 3, round 5: health variants under stronger L2 (does A+B beat HealthyPop at ~0 violation?)
+common: [threads=2, train.eval_every=2, train.patience=4, train.item_bias=true, train.lr=0.002, train.dim=64]
+runs:
+  - {name: b_hA_d64_reg1e-2, set: [train.reg=1.0e-2, health.use_features=true]}
+  - {name: b_hAB_l0.3_d64_reg1e-2, set: [train.reg=1.0e-2, health.use_features=true, health.lambda_h=0.3]}
+  - {name: b_hAB_l1_d64_reg1e-2, set: [train.reg=1.0e-2, health.use_features=true, health.lambda_h=1]}
+  - {name: b_hAB_l3_d64_reg1e-2, set: [train.reg=1.0e-2, health.use_features=true, health.lambda_h=3]}
+  - {name: b_hA_d64_reg3e-2, set: [train.reg=3.0e-2, health.use_features=true]}
+  - {name: b_hAB_l0.3_d64_reg3e-2, set: [train.reg=3.0e-2, health.use_features=true, health.lambda_h=0.3]}
+  - {name: b_hAB_l1_d64_reg3e-2, set: [train.reg=3.0e-2, health.use_features=true, health.lambda_h=1]}
+  - {name: b_hAB_l3_d64_reg3e-2, set: [train.reg=3.0e-2, health.use_features=true, health.lambda_h=3]}

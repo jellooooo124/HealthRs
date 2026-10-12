@@ -1,0 +1,5 @@
+Stage,Users,Recipes,Interactions,Density
+Raw reviews (all ratings),"271,907","271,678","1,401,982",1.90e-05
+"Positives (rating >= 4, clean recipes)","212,798","251,822","1,224,442",2.28e-05
+5-core (warm users),"19,455","45,926","636,391",7.12e-04
+Cold-start users (sampled),"3,000","2,918","3,929",4.49e-04
