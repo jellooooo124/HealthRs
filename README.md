@@ -1,4 +1,92 @@
-# HealthRec — a health-aware recipe recommender agent for chronic-disease diets
+# HealthRec 2.0 — Health-Aware Recipe Recommendation with Elasticsearch & Agentic AI
+
+**Personalized recipe search and recommendations grounded in food data, nutrition rules and individual feedback.**
+
+> **Research prototype, not a clinical product.** Health labels are rule-based estimates, ingredient checks cannot guarantee absence of allergens or cross-contact, and the application must not be used to make clinical decisions.
+
+HealthRec combines two complementary experiences: the **original CA6124 conversational recommendation agent** and a **new Elasticsearch-powered personalized search prototype**. The original implementation, published experiment results and team attribution remain intact below; the 2.0 extension is an additive engineering prototype and has not yet been evaluated head-to-head on the full catalog.
+
+## What's new in HealthRec 2.0?
+
+| Capability | HealthRec baseline | 2.0 Elasticsearch extension |
+| --- | --- | --- |
+| Candidate retrieval | BPR-MF taste channel + healthy popularity channel | Elasticsearch **BM25 multi-field text search** and structured filters |
+| Ranking | BPR-MF + condition embeddings, popularity calibration | **BM25 + optional existing BPR ranker + profile tastes + feedback + popularity** |
+| Personalization | Synthetic health profile and agent conversation memory | Per-user search, **liked/cooked category signals**, **dislike exclusions**, warm/cold-start fallback |
+| Safety controls | Allergen hard filter, condition labels and safety-review agent | Trusted SQLite profiles, **ES prefilter + Python second safety check**; unconfirmed profile requires confirmation |
+| Interface | LangGraph/MCP conversational Streamlit UI | Independent **FastAPI JSON API** and **Streamlit search demo** (LLM key not required) |
+| Search index | Food.com data for ML; Chroma for guidelines | Elasticsearch recipe index with nutrition fields, conditions and allergen labels |
+| Transparency | Trace of agent reasoning and tool calls | Explicit ranking components/weights, reasons and retrieval candidate count |
+
+**Important:** the Elasticsearch path is a **separate demo/API**, not yet connected as a replacement for the existing LangGraph `recommend_recipes` MCP tool. Chroma remains the original dietary-guideline RAG store. Original offline performance numbers below describe the **baseline**, not a measured 2.0 improvement.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  User[User query + constraints] --> API[FastAPI / Streamlit]
+  API --> Profiles[(SQLite profiles + feedback)]
+  API --> ES[(Elasticsearch BM25 recipe index)]
+  ES --> Safe[Hard health/allergen filters]
+  Safe --> Rank[Hybrid ranker]
+  Profiles --> Rank
+  BPR[Original BPR-MF + health-aware ranker, optional] --> Rank
+  Rank --> Review[Python safety recheck + category diversity]
+  Review --> TopK[Top-K recommendations + nutrition + scores]
+  TopK --> Feedback[Like / dislike / cooked]
+  Feedback --> Profiles
+  Agent[Original LangGraph agents + MCP + Chroma RAG] -. retained as separate experience .-> User
+```
+
+## Quick start — Elasticsearch prototype
+
+Requires **Python 3.12** and Docker. Run from the repository root:
+
+```bash
+pip install -r requirements.txt
+pip install -r prototype_elasticsearch/requirements-es.txt
+docker compose -f prototype_elasticsearch/compose.yaml up -d
+python -m prototype_elasticsearch.index_recipes --source sample --recreate
+uvicorn prototype_elasticsearch.server:app --host 127.0.0.1 --port 8000
+```
+
+In a second terminal:
+
+```bash
+streamlit run prototype_elasticsearch/ui.py
+```
+
+Open [http://localhost:8501](http://localhost:8501) for the interactive demo, or [http://localhost:8000/docs](http://localhost:8000/docs) for API documentation. The bundled sample can be indexed without a Kaggle download or LLM API key. To use the original trained BPR models, prepare `data/processed/` and serving checkpoints, then re-index with `--source processed`.
+
+### Safety and validation
+
+- In this developer prototype, Elasticsearch is bound to `127.0.0.1` with security **disabled for local use only**. Never expose this Compose configuration publicly.
+- The extension was checked with **8 offline unit tests** and Python syntax checks; a live Elasticsearch + full UI end-to-end test has **not** been confirmed.
+- The demo is unauthenticated and must use synthetic/non-sensitive profiles only. Real users would require identity, authorization, storage controls and prospective nutrition validation.
+
+Run the tests with:
+
+```bash
+python -m pytest prototype_elasticsearch/tests -q
+```
+
+**Detailed installation, example API calls, score weights, API contract and limitations:** [`prototype_elasticsearch/README.md`](prototype_elasticsearch/README.md).
+
+## Repository guide
+
+- [`prototype_elasticsearch/`](prototype_elasticsearch/) — **new** indexed search, profile-aware reranking, API, Streamlit UI, tests and local Docker Compose.
+- [`src/`](src/) — original PyTorch BPR-MF, health-aware adaptation, data and evaluation pipeline.
+- [`agent/`](agent/) — original LangGraph workflow, MCP tools, profile store and safety checks.
+- [`rag/`](rag/) — original Chroma guideline retrieval.
+- [`web/`](web/) — original conversational Streamlit app.
+
+## Project history and attribution
+
+The original HealthRec implementation is a **CA6124 group project**. This repository keeps its team attribution and original reported metrics without claiming sole authorship or that the new extension produced those legacy results. The section below documents that original system in full.
+
+---
+
+# HealthRec 1.x — Original CA6124 Recommender and Agentic Workflow
 
 CA6124 group project (healthcare recommender systems). This portfolio copy preserves the team project; it does not claim sole authorship by any individual contributor.
 
