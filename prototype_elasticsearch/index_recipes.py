@@ -18,8 +18,9 @@ DEFAULT_INDEX = "healthrec-recipes-v1"
 
 def read_catalog(source: str) -> tuple[pd.DataFrame, dict]:
     rules = yaml.safe_load((ROOT / "configs/health_rules.yaml").read_text(encoding="utf-8"))
-    if source == "processed":
-        path = ROOT / "data/processed/recipes.parquet"
+    if source in {"processed", "processed-sample"}:
+        path = ROOT / ("data/processed_sample/recipes.parquet" if source == "processed-sample"
+                       else "data/processed/recipes.parquet")
         if not path.is_file():
             raise FileNotFoundError(f"{path} missing. Run python scripts/prepare_data.py in original HealthRec.")
         df = pd.read_parquet(path)
@@ -64,7 +65,7 @@ def index_catalog(source: str = "sample", index: str = DEFAULT_INDEX, recreate: 
 
 def main():
     parser = argparse.ArgumentParser(description="Index HealthRec Food.com recipes in Elasticsearch")
-    parser.add_argument("--source", choices=("sample", "processed"), default="sample")
+    parser.add_argument("--source", choices=("sample", "processed", "processed-sample"), default="sample")
     parser.add_argument("--index", default=DEFAULT_INDEX)
     parser.add_argument("--recreate", action="store_true", help="DANGER: delete existing index before indexing")
     parser.add_argument("--limit", type=int)
