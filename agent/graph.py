@@ -31,6 +31,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
+from agent.fact_checker import factual_claim_issues, grounded_llm_issues
 from agent.mcp_client import tool_text
 from agent.middleware import AGENT_MIDDLEWARE, AgentContext
 from src.config import load_config
@@ -64,9 +65,11 @@ class ProfileDecision(BaseModel):
 
 
 class ReviewResult(BaseModel):
-    """Safety reviewer verdict."""
+    """Safety reviewer verdict: failure must cite exact draft and tool evidence."""
     passed: bool
     issues: list[str] = Field(default_factory=list)
+    draft_quote: str = Field("", description="Verbatim excerpt of the draft supporting the issue")
+    fact_quote: str = Field("", description="Verbatim excerpt of the tool facts showing the mismatch")
 
 
 # ---------------------------------------------------------------- graph state
@@ -223,9 +226,14 @@ class HealthRecGraph:
                 issues.append(f"#{rid} ({info['name']}) contains the user's allergen(s) "
                               f"{info['contains_user_allergens']}; remove it.")
             facts.append(info)   # e.g. a recipe recommended in an earlier turn that the user picked
+        # Independent deterministic checks are always blocking, even if the LLM
+        # reviewer incorrectly accepts the text.
+        if tool_mode and intent in {"recommend", "recipe_detail"}:
+            issues.extend(factual_claim_issues(draft, facts, profile))
         rule_issues = list(issues)
         # --- LLM check
         llm_verdict = None
+        unverified_llm_issues = []
         if self.cfg.get("reviewer_llm_check", True):
             if facts:
                 facts_txt = json.dumps([{k: r.get(k) for k in ("recipe_id", "name", "total_minutes", "nutrition_per_serving",
@@ -243,10 +251,15 @@ class HealthRecGraph:
             try:
                 llm_verdict = await self.reviewer.ainvoke(prompt)
                 if not llm_verdict.passed:
-                    issues += llm_verdict.issues or ["Reviewer flagged the draft as unsafe or unfaithful."]
+                    claimed = llm_verdict.issues or ["Reviewer flagged the draft as unsafe or unfaithful."]
+                    grounded, unverified_llm_issues = grounded_llm_issues(
+                        claimed, llm_verdict.draft_quote, llm_verdict.fact_quote,
+                        draft, facts_txt, profile)
+                    issues.extend(grounded)
             except Exception as e:   # reviewer failure must not block the reply; rule check still applies
                 logger.warning(f"[reviewer] LLM check failed: {e}")
         review = {"passed": not issues, "issues": issues, "rule_issues": rule_issues,
+                  "unverified_llm_issues": unverified_llm_issues,
                   "llm_passed": None if llm_verdict is None else llm_verdict.passed}
         return {"review": review, "trace": [{"node": "safety_reviewer", "ms": round((time.perf_counter() - t0) * 1000),
                                              "review": review, "revision": state.get("revision_count", 0)}]}
@@ -269,7 +282,9 @@ class HealthRecGraph:
         return {"reply": text, "route": "fallback", "trace": [{"node": "fallback"}]}
 
     async def finalize_node(self, state: GraphState) -> dict:
-        route = "reviewed" if self.cfg.get("safety_reviewer", True) else "unreviewed"
+        review = state.get("review") or {}
+        route = ("evidence_verified" if review.get("unverified_llm_issues")
+                 else "reviewed") if self.cfg.get("safety_reviewer", True) else "unreviewed"
         return {"reply": state.get("draft", ""), "route": route, "trace": [{"node": "finalize"}]}
 
     # ------------------------------------------------------------ wiring
