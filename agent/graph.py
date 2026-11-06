@@ -229,7 +229,8 @@ class HealthRecGraph:
         if self.cfg.get("reviewer_llm_check", True):
             if facts:
                 facts_txt = json.dumps([{k: r.get(k) for k in ("recipe_id", "name", "total_minutes", "nutrition_per_serving",
-                                                              "complies_with", "violations", "ingredients")} for r in facts],
+                                                              "complies_with", "violations", "ingredients",
+                                                              "contains_user_allergens")} for r in facts],
                                        ensure_ascii=False)   # complies_with: true = passes that condition's guideline rules
             elif tool_mode:
                 facts_txt = "(the draft cites no recipe ids)"
