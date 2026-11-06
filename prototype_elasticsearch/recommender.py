@@ -15,7 +15,8 @@ class HybridRecommender:
         self.es, self.store, self.index, self.use_bpr = es, store, index, use_bpr
 
     def recommend(self, user_id: str, text: str = "", constraints: dict | None = None,
-                  k: int = 5, candidate_size: int = 100) -> dict:
+                  k: int = 5, candidate_size: int = 100,
+                  exclude_recipe_ids: list[int] | None = None) -> dict:
         # Critical: conditions/allergies are READ FROM THE TRUSTED PROFILE, never request payload.
         profile = self.store.get(str(user_id)) or self.store.create(str(user_id))
         if not profile.get("confirmed"):
@@ -23,6 +24,7 @@ class HybridRecommender:
                     "message": "Confirm health conditions and allergies before receiving recommendations."}
         feedback = self.store.latest_feedback(user_id)
         excluded = {int(rid) for rid, f in feedback.items() if f.get("signal") == "dislike"}
+        excluded.update(int(rid) for rid in (exclude_recipe_ids or []))
         dsl = build_query(text, profile["conditions"], profile["allergies"], constraints, excluded)
         docs = retrieve(self.es, self.index, dsl, candidate_size)
         model_scores = optional_bpr_scores(profile, docs, enabled=self.use_bpr)
