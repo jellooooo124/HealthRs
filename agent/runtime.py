@@ -8,6 +8,7 @@ Entry point used by the demo and the evaluation scripts.
 For sync callers (Streamlit) use SyncHealthRecAgent, which runs a private event loop in a thread.
 """
 import asyncio
+import os
 import re
 import threading
 import time
@@ -54,7 +55,9 @@ class HealthRecAgent:
                                                             "recursion_limit": 40})
         reply = redact_pii(out.get("reply", ""))
         self.memory.add_conversation(session, text, reply, kind="clarification" if out.get("route") == "clarify" else "answer")
-        return {"reply": reply, "route": out.get("route"), "request": out.get("request"),
+        return {"reply": reply, "route": out.get("route"),
+                "debug_draft": out.get("draft", "") if os.environ.get("HEALTHREC_EVAL_CAPTURE_DRAFT") == "1" else "",
+                "request": out.get("request"),
                 "profile": out.get("profile"), "candidates": out.get("candidates", []),
                 "review": out.get("review"), "revisions": out.get("revision_count", 0),
                 "trace": out.get("trace", []), "usage": usage.as_dict(), "model": self.model_name,
