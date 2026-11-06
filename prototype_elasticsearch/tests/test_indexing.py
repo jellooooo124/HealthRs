@@ -9,3 +9,9 @@ def test_to_document_reuses_existing_health_labels():
     assert x["nutrition_complete"] is True
     assert set(x["compliant_conditions"]) == {"diabetes", "hypertension"}
     assert x["allergens"] == ["milk"]
+
+
+def test_parquet_numpy_array_ingredients_are_indexed():
+    import numpy as np
+    from prototype_elasticsearch.schema import strings
+    assert strings(np.array(["chicken", "peanut"])) == ["chicken", "peanut"]

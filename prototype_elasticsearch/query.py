@@ -27,7 +27,9 @@ def build_query(
                 raise ValueError(f"{field} must be non-negative")
             target = "total_minutes" if field == "max_minutes" else "nutrition.calories"
             filters.append({"range": {target: {"lte": value}}})
-    if c.get("category"):
+    if c.get("categories"):
+        filters.append({"terms": {"category": sorted(set(map(str, c["categories"])))}})
+    elif c.get("category"):
         filters.append({"term": {"category": str(c["category"])}})
     included = [p.strip() for p in c.get("include_ingredients", []) if p and p.strip()]
     if included:

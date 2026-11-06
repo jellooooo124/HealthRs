@@ -20,6 +20,8 @@ MAPPING = {
         "category": {"type": "keyword"},
         "keywords": {"type": "text"},
         "ingredients": {"type": "text"},
+        "steps": {"type": "text", "index": False},
+        "servings": {"type": "float"},
         "ingredient_text": {"type": "text"},
         "image_url": {"type": "keyword", "index": False},
         "total_minutes": {"type": "float"},
@@ -42,6 +44,10 @@ def number(value):
 
 
 def strings(value) -> list[str]:
+    # Parquet round-trips Food.com list columns as numpy.ndarray, whereas
+    # the raw CSV loader uses Python lists. Both must be indexable.
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        value = value.tolist()
     if not isinstance(value, (tuple, list)):
         return []
     return [html.unescape(str(x)).strip() for x in value if x is not None and str(x).strip()]
@@ -68,6 +74,8 @@ def to_document(row: dict, conditions: list[str], allergens: list[str]) -> dict:
         "category": str(row.get("RecipeCategory") or ""),
         "keywords": strings(row.get("Keywords")), "ingredients": ingredient_names,
         "ingredient_text": " | ".join([*ingredient_names, str(row.get("Name") or ""), *strings(row.get("RecipeInstructions"))]),
+        "steps": strings(row.get("RecipeInstructions")),
+        "servings": number(row.get("RecipeServings")),
         "image_url": row.get("ImageUrl") if isinstance(row.get("ImageUrl"), str) else None,
         "total_minutes": number(row.get("TotalMinutes")),
         "nutrition": nutrition,

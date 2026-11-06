@@ -18,7 +18,7 @@ HealthRec combines two complementary experiences: the **original CA6124 conversa
 | Search index | Food.com data for ML; Chroma for guidelines | Elasticsearch recipe index with nutrition fields, conditions and allergen labels |
 | Transparency | Trace of agent reasoning and tool calls | Explicit ranking components/weights, reasons and retrieval candidate count |
 
-**Important:** the Elasticsearch path is a **separate demo/API**, not yet connected as a replacement for the existing LangGraph `recommend_recipes` MCP tool. Chroma remains the original dietary-guideline RAG store. Original offline performance numbers below describe the **baseline**, not a measured 2.0 improvement.
+**Integration update:** The Elasticsearch path can now serve the original LangGraph `recommend_recipes` MCP tool with `HEALTHREC_RETRIEVAL_BACKEND=elasticsearch`. The default remains `legacy`, preserving the original recommender and previously reported team experiments. The original dietary-guideline RAG remains on Chroma. The Elasticsearch prototype is still NOT a clinically validated service, nor is its search relevance proven superior to the baseline.
 
 ## Architecture
 
@@ -71,6 +71,88 @@ python -m pytest prototype_elasticsearch/tests -q
 ```
 
 **Detailed installation, example API calls, score weights, API contract and limitations:** [`prototype_elasticsearch/README.md`](prototype_elasticsearch/README.md).
+
+## Using Elasticsearch with the original LangGraph chat agent
+
+The original MCP tool now has an **opt-in** Elasticsearch backend. Both search and the existing profile/feedback tools read from the same SQLite profile store; the results are normalized into the original agent/reviewer contract, including recipe IDs, nutrition and condition-compliance fields.
+
+To try the integration **with your own LLM credentials**, install the base and ES requirements, start Elasticsearch, build a sample index, and **restart any already-running MCP server** so it picks up the new environment variables:
+
+```bash
+pip install -r requirements.txt -r prototype_elasticsearch/requirements-es.txt
+docker compose -f prototype_elasticsearch/compose.yaml up -d
+python -m prototype_elasticsearch.index_recipes --source sample --recreate
+export HEALTHREC_RETRIEVAL_BACKEND=elasticsearch
+export HEALTHREC_USE_BPR=0  # sample-only environment: no trained user/model IDs
+# Set DASHSCOPE_API_KEY / DASHSCOPE_BASE_URL in your local .env, then:
+streamlit run web/app_ui.py
+```
+
+For full-data use, run `python scripts/prepare_data.py`, index with `--source processed --recreate`, and set `HEALTHREC_USE_BPR=1` if serving checkpoints exist. The MCP server started by `agent/mcp_client.py` must be restarted when switching backends (use a new `HEALTHREC_MCP_PORT` or stop the old process). The original Streamlit chat requires the full processed catalog and LLM configuration; the *standalone* `prototype_elasticsearch/ui.py` remains a no-LLM, sample-capable search demo.
+
+The MCP `recommend_recipes` tool now accepts an optional plain-text `query` for BM25 and still supports time/calorie filters, ingredient exclusions and per-turn recipe exclusions. Categories are supported; legacy `meal_type` is currently best expressed through the text query, rather than a strict Elasticsearch category filter. When the Elasticsearch service fails, the tool reports an error; it does **not** silently fall back to unfiltered recipes.
+
+### Automated verification
+
+```bash
+# Fast tests (do not require a running Elasticsearch server)
+python -m pytest -q prototype_elasticsearch/tests tests/test_search_backend.py
+
+# REAL Elasticsearch + API + streamable MCP contract test (no LLM key required)
+docker compose -f prototype_elasticsearch/compose.yaml up -d
+python -m pytest -q -m live_es tests/test_elasticsearch_mcp_e2e.py
+```
+
+The GitHub Actions workflow `.github/workflows/healthrec-es-e2e.yml` indexes into a **real Elasticsearch 8.x service** and exercises FastAPI, MCP, profile filters, recipe details, feedback exclusions and evidence-based factual claim regression tests. It requires no paid model API. [Validated CI](https://github.com/jellooooo124/HealthRs/actions/runs/42206442559).
+
+### Measured search quality and latency (2026-11-06)
+
+The separate `.github/workflows/healthrec-search-benchmark.yml` workflow prepares the bundled Food.com sample (857 indexed recipes), retrains the original BPR-MF architecture **using TRAIN interactions only**, generates 60 warm-user queries from past **TRAIN recipe titles only**, and evaluates one held-out future positive item per user. Elasticsearch runs as a real Docker service. Fixed seed: 2026; BM25 candidates: 100.
+
+| Method | NDCG@10 | Recall@10 | P95 latency |
+| --- | ---: | ---: | ---: |
+| BM25 | 0.0053 | 0.0167 | 13.6 ms |
+| BM25 + taste/feedback | 0.0064 | 0.0167 | 15.3 ms |
+| BM25 + BPR + taste/feedback | 0.0083 | 0.0167 | 15.6 ms |
+| Original BPR-MF (sample-trained) | **0.0324** | **0.0500** | **0.6 ms** |
+
+[Successful benchmark CI and raw metrics.json/results.md artifact](https://github.com/jellooooo124/HealthRs/actions/runs/42195887644).
+
+**Interpretation:** On this limited held-out **recommendation** task, BPR-MF is better than the new lexical/hybrid methods. Elasticsearch is useful for explicit text queries and filtering, but these numbers do **not** prove an accuracy improvement. A historical positive rating is **not** a human judgment of search-query relevance. One held-out target makes Recall@10 equal HitRate@10. ES methods score up to 100 lexical matches while BPR scores the full eligible catalog; P95 includes service round trips for ES but BPR uses local CPU. The benchmark is small-sample, single-seed, and cannot be generalized to live traffic or the full Food.com dataset.
+
+Run the experiment again with:
+```bash
+HEALTHREC_DATA_CONFIG=data_sample python scripts/prepare_data.py
+HEALTHREC_DATA_CONFIG=data_sample HEALTHREC_OUTPUTS=outputs_search_bench \
+  python scripts/train.py --name sample_bpr --set train.dim=32 train.max_epochs=20 train.eval_every=2 train.patience=3 train.batch_size=1024 train.item_bias=true
+docker compose -f prototype_elasticsearch/compose.yaml up -d
+python -m scripts.benchmark_search --users 60 --candidate-size 100 --out outputs/search_benchmark
+```
+
+### LangGraph hard gates and CI policy
+
+The **profile Agent no longer has a callable health-update tool**. Before asking an LLM to interpret a user's request, the graph evaluates the **original user message** with \`agent/health_write_policy.py\`. Only unambiguous **first-person** statements can modify listed conditions/allergies (e.g. \`I have a peanut allergy\`); requests like \`suggest two more chicken recipes\`, hypotheticals and statements about someone else cannot silently change the health profile. Unknown phrasing is intentionally ignored until clarified or entered through a verified profile-edit interface. Updates use the existing MCP profile store. **Important threat boundary:** the direct local MCP profile-edit endpoint itself is not an independently authenticated public health-record API; do not expose that local service publicly.
+
+The graph's \`agent/recipe_provenance.py\` enforces a **tool-result provenance gate**. For new recommendations, EVERY cited #recipe_id must come from the **current-turn** \`recommend_recipes\` tool response; even an existing ID elsewhere in the index is not enough. Recipe-detail questions may only revisit recipe IDs shown in earlier assistant replies. The reviewer cannot resolve ungrounded recommendations by looking up an arbitrary ID.
+
+**Required PR CI:** \`.github/workflows/healthrec-es-e2e.yml\` now runs:
+- Python health authorization / recipe provenance regression tests.
+- Original Elasticsearch search + result normalization + evidence-checker tests.
+- A running Elasticsearch 8.x server, FastAPI requests and real HTTP MCP calls.
+- The real LangGraph **routing graph** with deterministic stand-ins for ONLY the LLM messages. One case must finalize a verified result; one deliberately invented #recipe_id must be blocked and fall back. This proves graph wiring and guards, not model intelligence.
+
+**Manual/evaluation workflows** (do not run on every pull request):
+- \`healthrec-real-llm.yml\` — original three-agent Qwen/Ollama multi-turn LLM regression.
+- \`healthrec-agent-evaluation.yml\` — independently evaluates the real Profile, Recommender and Reviewer agents. It produces \`outputs/agent_evaluation/results.json\` and \`results.md\`, including the results of failures. A successful **workflow execution does not mean model quality passed**; check \`quality_passed\`.
+- \`healthrec-search-benchmark.yml\` — reproduces the relevance/latency comparison separately.
+
+To rerun manual LLM evaluations: open GitHub Actions, select the respective workflow, use **Run workflow**, choose the PR branch and inspect the uploaded evaluation artifact. The local runtime uses an actual Ollama Qwen model, not fake LLM responses.
+
+### Real three-agent LLM integration test (not mocked)
+
+The workflow `.github/workflows/healthrec-real-llm.yml` downloads and runs a real **Ollama/Qwen2.5:3b** model locally, then drives the existing LangGraph **profile, recommender, and safety-reviewer** agents through **three conversational turns** using real Elasticsearch and streamable MCP tools. It records the intermediate model draft, applied tools, review verdicts, and final response as `transcript.json`, and fails if tool calls or reviewer verdicts are missing. Reproduction on GitHub Actions does **not** depend on external model API keys.
+
+**Safety qualification:** Earlier runs exposed a genuine small-model failure mode: invented nutrition claims and incorrect reviewer critiques (e.g. asserting 40 minutes contradicts 40.0). The integration now includes independent deterministic checks that block unsupported sodium/sugar/allergen-free claims. For users with health restrictions, uncertain LLM warnings **still block**; for confirmed profiles with **no** reported conditions/allergies, unsubstantiated reviewer comments are recorded as `unverified_llm_issues`, and an accepted response has route `evidence_verified` rather than pretending that the LLM reviewer approved. This is a **research prototype**, not verified medical or allergen clearance. The full model-based multi-turn quality check must be inspected in CI before being described as passed.
 
 ## Repository guide
 
