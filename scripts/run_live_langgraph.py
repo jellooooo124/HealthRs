@@ -121,10 +121,11 @@ async def run_dialogs(out: Path, *, model: str, index: str) -> dict:
     assert sum("recommend_recipes" in item["tool_names"] for item in transcript) >= 1, (
         "No real MCP recommend_recipes call was observed")
     assert any(item["candidate_ids"] for item in transcript), "No grounded recipe recommendations produced"
-    assert any(item["route"] == "reviewed" for item in transcript), (
-        "All turns fell back; model did not produce a reviewed output")
+    assert any(item["route"] in {"reviewed", "evidence_verified"} for item in transcript), (
+        "All turns fell back: no output passed the deterministic evidence gate")
     return {"model": model, "turns": len(transcript),
-            "reviewed": sum(x["route"] == "reviewed" for x in transcript),
+            "llm_accepted": sum(x["route"] == "reviewed" for x in transcript),
+            "evidence_verified": sum(x["route"] == "evidence_verified" for x in transcript),
             "all_safety_llm_checked": True,
             "grounded_recommendations": sum(bool(x["candidate_ids"]) for x in transcript)}
 
