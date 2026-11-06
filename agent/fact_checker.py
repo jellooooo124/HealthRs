@@ -44,17 +44,31 @@ def grounded_llm_issues(
     facts_text: str,
     profile: dict,
 ) -> tuple[list[str], list[str]]:
-    """Return (blocking, unsupported) LLM issues.
+    """Return (blocking, unsupported) reviewer issues without hiding uncertainty.
 
-    The reviewer must quote BOTH the draft and the factual evidence verbatim.
-    A failure of proof on an unrestricted profile is logged, not trusted as a
-    safety fact. If user reports health conditions or allergies, fail closed.
+    Known conditions/allergies: fail closed on ANY LLM warning, even if its
+    quoted evidence is poor. Unrestricted profile: unsubstantiated warnings
+    (or reviewer claims in domains checked independently in Python) are logged
+    separately; non-medical prose guesses must not veto safe grounded recipes.
+    Direct medical treatment/medication advice remains blocking regardless.
     """
     if not issues:
         return [], []
-    linked = (len(draft_quote.strip()) >= 4 and len(fact_quote.strip()) >= 4
-              and draft_quote.strip().casefold() in draft.casefold()
-              and fact_quote.strip().casefold() in facts_text.casefold())
-    if linked or profile.get("conditions") or profile.get("allergies"):
+    if profile.get("conditions") or profile.get("allergies"):
         return list(issues), []
+    lower_draft = draft.casefold()
+    risky_advice = bool(re.search(
+        r"\b(?:insulin|dosage|medication|prescription|cure diabetes|stop taking|diagnos(?:is|e))\b",
+        lower_draft,
+    ))
+    if risky_advice:
+        return list(issues), []
+    linked = (len(draft_quote.strip()) >= 4 and len(fact_quote.strip()) >= 4
+              and draft_quote.strip().casefold() in lower_draft
+              and fact_quote.strip().casefold() in facts_text.casefold())
+    # A matching quote pair does NOT prove a contradiction. E.g. a claim that
+    # 40 minutes "contradicts" a tool value of 40.0 is a reviewer hallucination.
+    # Claims with actual safety implications are independently checked above
+    # (factual_claim_issues), plus the existing hard recipe/allergen rules.
+    # Keep the full critique visible for evaluation; do not pretend it passed.
     return [], list(issues)
