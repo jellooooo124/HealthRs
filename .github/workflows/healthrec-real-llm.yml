@@ -1,0 +1,68 @@
+name: HealthRec Real LangGraph LLM E2E
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-llm-multiturn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.19.23
+        ports:
+          - 9200:9200
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: "false"
+          ES_JAVA_OPTS: -Xms256m -Xmx256m
+        options: >-
+          --health-cmd "curl -fsS http://localhost:9200/_cluster/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install LangGraph, MCP and Elasticsearch dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r prototype_elasticsearch/requirements-es.txt "numpy>=1.26,<3" "pandas>=2.2,<4" "pyyaml>=6,<7" "python-dotenv>=1,<2" "langchain>=1,<2" "langchain-openai>=1,<2" "langgraph>=1,<2" "langchain-mcp-adapters>=0.3,<1" "mcp>=1.25,<2"
+      - name: Start REAL locally served Ollama LLM and download model
+        env:
+          OLLAMA_HOST: 127.0.0.1:11434
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:11434/api/tags >/dev/null
+          ollama pull qwen2.5:3b
+          ollama list
+      - name: REAL local-LLM three-agent three-turn evaluation
+        env:
+          ELASTICSEARCH_URL: http://127.0.0.1:9200
+          HEALTHREC_ES_INDEX: healthrec-langgraph-llm
+          HEALTHREC_RETRIEVAL_BACKEND: elasticsearch
+          HEALTHREC_USE_BPR: "0"
+          HEALTHREC_MCP_PORT: "18767"
+          HEALTHREC_PROFILE_DB: ${{ runner.temp }}/healthrec_llm_profiles.sqlite
+          HEALTHREC_OLLAMA_MODEL: qwen2.5:3b
+        run: python -m scripts.run_live_langgraph --out outputs/live_langgraph
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: healthrec-real-llm-dialogs
+          path: outputs/live_langgraph/transcript.json
+          if-no-files-found: warn
+      - name: Print Ollama server troubleshooting logs on failure
+        if: failure()
+        run: tail -120 "$RUNNER_TEMP/ollama.log" || true
