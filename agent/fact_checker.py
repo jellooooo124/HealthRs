@@ -22,14 +22,16 @@ def factual_claim_issues(draft: str, facts: list[dict], profile: dict) -> list[s
             re.search(r"\b(?:comply|complies|compliant) with (?:your|all) health conditions\b", text)):
         issues.append("Do not assert compliance with unspecified health conditions.")
     nutr = [r.get("nutrition_per_serving") or {} for r in facts]
+    def missing_or_above(key: str, maximum: float) -> bool:
+        return not nutr or any(n.get(key) is None or float(n[key]) > maximum for n in nutr)
     if re.search(r"\b(?:sodium[\s-]*free|zero sodium|no sodium|salt[\s-]*free)\b", text):
-        if not nutr or any(float(n.get("sodium_mg") or 0) >= 5 for n in nutr):
+        if missing_or_above("sodium_mg", 4.999):
             issues.append("Do not describe the listed recipes as sodium-free without supporting values.")
     if re.search(r"\b(?:low[\s-]*sodium|low in sodium|low salt)\b", text):
-        if not nutr or any(float(n.get("sodium_mg") or 0) > 140 for n in nutr):
+        if missing_or_above("sodium_mg", 140):
             issues.append("Do not call recipes low-sodium when any cited serving exceeds 140 mg sodium.")
     if re.search(r"\b(?:sugar[\s-]*free|zero sugar|no sugar)\b", text):
-        if not nutr or any(float(n.get("sugar_g") or 0) >= 0.5 for n in nutr):
+        if missing_or_above("sugar_g", 0.499):
             issues.append("Do not claim sugar-free when cited servings contain sugar.")
     if re.search(r"\b(?:low[\s-]*sugar|low in sugar)\b", text):
         issues.append("Avoid unverified low-sugar claims; the catalog has no reliable per-100g serving mass.")
@@ -63,12 +65,9 @@ def grounded_llm_issues(
     ))
     if risky_advice:
         return list(issues), []
-    linked = (len(draft_quote.strip()) >= 4 and len(fact_quote.strip()) >= 4
-              and draft_quote.strip().casefold() in lower_draft
-              and fact_quote.strip().casefold() in facts_text.casefold())
-    # A matching quote pair does NOT prove a contradiction. E.g. a claim that
-    # 40 minutes "contradicts" a tool value of 40.0 is a reviewer hallucination.
-    # Claims with actual safety implications are independently checked above
-    # (factual_claim_issues), plus the existing hard recipe/allergen rules.
-    # Keep the full critique visible for evaluation; do not pretend it passed.
+    # Even matching snippets do NOT prove a contradiction. A statement that
+    # "40 minutes" contradicts 40.0 minutes is itself wrong. For unrestricted
+    # profiles, the independent hard rules are the safety gate and the remaining
+    # LLM critique is retained as a visible, advisory finding. Neither the LLM
+    # verdict nor its critique is falsely recorded as passed.
     return [], list(issues)
