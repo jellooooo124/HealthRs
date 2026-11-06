@@ -129,6 +129,25 @@ docker compose -f prototype_elasticsearch/compose.yaml up -d
 python -m scripts.benchmark_search --users 60 --candidate-size 100 --out outputs/search_benchmark
 ```
 
+### LangGraph hard gates and CI policy
+
+The **profile Agent no longer has a callable health-update tool**. Before asking an LLM to interpret a user's request, the graph evaluates the **original user message** with \`agent/health_write_policy.py\`. Only unambiguous **first-person** statements can modify listed conditions/allergies (e.g. \`I have a peanut allergy\`); requests like \`suggest two more chicken recipes\`, hypotheticals and statements about someone else cannot silently change the health profile. Unknown phrasing is intentionally ignored until clarified or entered through a verified profile-edit interface. Updates use the existing MCP profile store. **Important threat boundary:** the direct local MCP profile-edit endpoint itself is not an independently authenticated public health-record API; do not expose that local service publicly.
+
+The graph's \`agent/recipe_provenance.py\` enforces a **tool-result provenance gate**. For new recommendations, EVERY cited #recipe_id must come from the **current-turn** \`recommend_recipes\` tool response; even an existing ID elsewhere in the index is not enough. Recipe-detail questions may only revisit recipe IDs shown in earlier assistant replies. The reviewer cannot resolve ungrounded recommendations by looking up an arbitrary ID.
+
+**Required PR CI:** \`.github/workflows/healthrec-es-e2e.yml\` now runs:
+- Python health authorization / recipe provenance regression tests.
+- Original Elasticsearch search + result normalization + evidence-checker tests.
+- A running Elasticsearch 8.x server, FastAPI requests and real HTTP MCP calls.
+- The real LangGraph **routing graph** with deterministic stand-ins for ONLY the LLM messages. One case must finalize a verified result; one deliberately invented #recipe_id must be blocked and fall back. This proves graph wiring and guards, not model intelligence.
+
+**Manual/evaluation workflows** (do not run on every pull request):
+- \`healthrec-real-llm.yml\` — original three-agent Qwen/Ollama multi-turn LLM regression.
+- \`healthrec-agent-evaluation.yml\` — independently evaluates the real Profile, Recommender and Reviewer agents. It produces \`outputs/agent_evaluation/results.json\` and \`results.md\`, including the results of failures. A successful **workflow execution does not mean model quality passed**; check \`quality_passed\`.
+- \`healthrec-search-benchmark.yml\` — reproduces the relevance/latency comparison separately.
+
+To rerun manual LLM evaluations: open GitHub Actions, select the respective workflow, use **Run workflow**, choose the PR branch and inspect the uploaded evaluation artifact. The local runtime uses an actual Ollama Qwen model, not fake LLM responses.
+
 ### Real three-agent LLM integration test (not mocked)
 
 The workflow `.github/workflows/healthrec-real-llm.yml` downloads and runs a real **Ollama/Qwen2.5:3b** model locally, then drives the existing LangGraph **profile, recommender, and safety-reviewer** agents through **three conversational turns** using real Elasticsearch and streamable MCP tools. It records the intermediate model draft, applied tools, review verdicts, and final response as `transcript.json`, and fails if tool calls or reviewer verdicts are missing. Reproduction on GitHub Actions does **not** depend on external model API keys.
