@@ -115,10 +115,11 @@ class HealthRecGraph:
             rec_tools.insert(0, tools["recommend_recipes"])
         self.rec_agent = create_agent(llm, rec_tools, middleware=middleware, context_schema=AgentContext,
                                       name="recommender_agent")
-        self.reviewer = llm.with_structured_output(ReviewResult, method="function_calling")
+        reviewer_method = self.cfg.get("reviewer_output_method", "function_calling")
+        self.reviewer = llm.with_structured_output(ReviewResult, method=reviewer_method)
         if fallback_llms:
             self.reviewer = self.reviewer.with_fallbacks(
-                [f.with_structured_output(ReviewResult, method="function_calling") for f in fallback_llms])
+                [f.with_structured_output(ReviewResult, method=reviewer_method) for f in fallback_llms])
         self.graph = self._build()
 
     # ------------------------------------------------------------ helpers
