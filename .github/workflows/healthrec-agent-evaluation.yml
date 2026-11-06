@@ -9,7 +9,6 @@ concurrency:
 # Real LLM evaluation is optional and intentionally not a required PR check.
 # Trigger it manually from GitHub Actions to preserve measurable case-level results.
 on:
-  pull_request:  # one validation run; revert to manual-only after the run starts
   workflow_dispatch:
 
 permissions:
