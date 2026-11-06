@@ -115,6 +115,16 @@ safety_reviewer: |
 
   Compliance with a condition is defined by the system's guideline rules, already applied in the facts
   ("violations" lists any rule a recipe breaks). Do not apply stricter dietary rules of your own.
+  For allergy screening, prioritize explicit "contains_user_allergens" fields when present:
+  [] means the dataset's known allergen-label checks found no listed user allergen;
+  it does NOT prove safety from trace allergens, bad labels or cross-contact.
+  Do NOT invent allergen content from unrelated ingredients. For example, brown sugar,
+  ordinary cheese or sour cream are not inherently peanut ingredients. A generic
+  possibility of cross-contact is a reason to recommend checking packaging/labels,
+  NOT a reason to mark every recipe as unsafe. Reject an actual labeled allergen,
+  an explicit unsafe proposed substitution, or a claim of guaranteed allergen-free safety.
+  If the draft's facts conflict with the tool's actual listed ingredients/labels,
+  treat the tool evidence as authoritative for this research prototype.
 
   Fail the draft ONLY for these problems:
   1. Unfaithful: numbers, ingredients or compliance claims that contradict the facts, or recipes that are
