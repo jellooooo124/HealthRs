@@ -103,7 +103,37 @@ docker compose -f prototype_elasticsearch/compose.yaml up -d
 python -m pytest -q -m live_es tests/test_elasticsearch_mcp_e2e.py
 ```
 
-The GitHub Actions workflow `.github/workflows/healthrec-es-e2e.yml` performs indexing against a real Elasticsearch 8.x service, exercises the FastAPI endpoint, calls the same MCP tool used by LangGraph, and tests profile filters, details and feedback exclusions. This verifies the integration path without requiring a paid model API. **It does not test LLM-generated dialogue end-to-end**; that still requires configured LLM credentials and separate checks. Inspect the actual CI run before claiming it passed.
+The GitHub Actions workflow `.github/workflows/healthrec-es-e2e.yml` indexes into a **real Elasticsearch 8.x service** and exercises FastAPI, MCP, profile filters, recipe details, feedback exclusions and evidence-based factual claim regression tests. It requires no paid model API. [Validated CI](https://github.com/jellooooo124/HealthRs/actions/runs/42206442559).
+
+### Measured search quality and latency (2026-11-06)
+
+The separate `.github/workflows/healthrec-search-benchmark.yml` workflow prepares the bundled Food.com sample (857 indexed recipes), retrains the original BPR-MF architecture **using TRAIN interactions only**, generates 60 warm-user queries from past **TRAIN recipe titles only**, and evaluates one held-out future positive item per user. Elasticsearch runs as a real Docker service. Fixed seed: 2026; BM25 candidates: 100.
+
+| Method | NDCG@10 | Recall@10 | P95 latency |
+| --- | ---: | ---: | ---: |
+| BM25 | 0.0053 | 0.0167 | 13.6 ms |
+| BM25 + taste/feedback | 0.0064 | 0.0167 | 15.3 ms |
+| BM25 + BPR + taste/feedback | 0.0083 | 0.0167 | 15.6 ms |
+| Original BPR-MF (sample-trained) | **0.0324** | **0.0500** | **0.6 ms** |
+
+[Successful benchmark CI and raw metrics.json/results.md artifact](https://github.com/jellooooo124/HealthRs/actions/runs/42195887644).
+
+**Interpretation:** On this limited held-out **recommendation** task, BPR-MF is better than the new lexical/hybrid methods. Elasticsearch is useful for explicit text queries and filtering, but these numbers do **not** prove an accuracy improvement. A historical positive rating is **not** a human judgment of search-query relevance. One held-out target makes Recall@10 equal HitRate@10. ES methods score up to 100 lexical matches while BPR scores the full eligible catalog; P95 includes service round trips for ES but BPR uses local CPU. The benchmark is small-sample, single-seed, and cannot be generalized to live traffic or the full Food.com dataset.
+
+Run the experiment again with:
+```bash
+HEALTHREC_DATA_CONFIG=data_sample python scripts/prepare_data.py
+HEALTHREC_DATA_CONFIG=data_sample HEALTHREC_OUTPUTS=outputs_search_bench \
+  python scripts/train.py --name sample_bpr --set train.dim=32 train.max_epochs=20 train.eval_every=2 train.patience=3 train.batch_size=1024 train.item_bias=true
+docker compose -f prototype_elasticsearch/compose.yaml up -d
+python -m scripts.benchmark_search --users 60 --candidate-size 100 --out outputs/search_benchmark
+```
+
+### Real three-agent LLM integration test (not mocked)
+
+The workflow `.github/workflows/healthrec-real-llm.yml` downloads and runs a real **Ollama/Qwen2.5:3b** model locally, then drives the existing LangGraph **profile, recommender, and safety-reviewer** agents through **three conversational turns** using real Elasticsearch and streamable MCP tools. It records the intermediate model draft, applied tools, review verdicts, and final response as `transcript.json`, and fails if tool calls or reviewer verdicts are missing. Reproduction on GitHub Actions does **not** depend on external model API keys.
+
+**Safety qualification:** Earlier runs exposed a genuine small-model failure mode: invented nutrition claims and incorrect reviewer critiques (e.g. asserting 40 minutes contradicts 40.0). The integration now includes independent deterministic checks that block unsupported sodium/sugar/allergen-free claims. For users with health restrictions, uncertain LLM warnings **still block**; for confirmed profiles with **no** reported conditions/allergies, unsubstantiated reviewer comments are recorded as `unverified_llm_issues`, and an accepted response has route `evidence_verified` rather than pretending that the LLM reviewer approved. This is a **research prototype**, not verified medical or allergen clearance. The full model-based multi-turn quality check must be inspected in CI before being described as passed.
 
 ## Repository guide
 
