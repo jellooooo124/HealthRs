@@ -104,6 +104,68 @@ def test_real_elasticsearch_index_fastapi_and_mcp(tmp_path, monkeypatch):
                 "user_id": "e2e_user", "query": "", "k": 5, "exclude_recipe_ids": [rid],
             })))
             assert rid not in [r["recipe_id"] for r in again["recipes"]]
+
+            # Real LangGraph graph, real running Elasticsearch, and real HTTP
+            # MCP tools; ONLY the LLM replies are deliberately deterministic.
+            # This test validates the actual graph routing and hard safety gates.
+            from langchain_core.messages import AIMessage, ToolMessage
+            from agent.graph import HealthRecGraph, ProfileDecision
+            from src.config import load_config
+
+            class FixedProfileAgent:
+                async def ainvoke(self, *args, **kwargs):
+                    return {"structured_response": ProfileDecision(intent="recommend")}
+
+            class FixedRecAgent:
+                def __init__(self, invent=False):
+                    self.invent = invent
+
+                async def ainvoke(self, *args, **kwargs):
+                    real_result = tool_text(await tools["recommend_recipes"].ainvoke({
+                        "user_id": "e2e_user", "query": "", "k": 2,
+                    }))
+                    candidates = json.loads(real_result)["recipes"]
+                    assert candidates
+                    correct = candidates[0]
+                    cited_id = 130001 if self.invent else correct["recipe_id"]
+                    text = f"Try **{correct['name']}** (#{cited_id})."
+                    return {"messages": [
+                        ToolMessage(content=real_result, name="recommend_recipes", tool_call_id="verified_1"),
+                        AIMessage(content=text),
+                    ]}
+
+            g = object.__new__(HealthRecGraph)
+            g.cfg = {"recommender_tool": True, "clarification": False,
+                     "safety_reviewer": True, "reviewer_llm_check": False,
+                     "history_turns": 4}
+            g.tools = tools
+            g.prompts = load_config("prompts")
+            g.profile_agent = FixedProfileAgent()
+            g.max_revisions = 0
+            g.rec_agent = FixedRecAgent()
+            g.graph = g._build()
+
+            valid = await g.graph.ainvoke({
+                "user_id": "e2e_user",
+                "user_input": "Please recommend two chicken recipes.",
+                "history": [], "trace": [],
+            })
+            assert valid["route"] == "reviewed", valid.get("review")
+            assert valid["review"]["rule_issues"] == []
+            assert f"#{valid['candidates'][0]['recipe_id']}" in valid["reply"]
+            assert valid["candidates"]
+            assert valid["profile"]["allergies"] == ["peanut"]
+
+            g.rec_agent = FixedRecAgent(invent=True)
+            invalid = await g.graph.ainvoke({
+                "user_id": "e2e_user",
+                "user_input": "Please show me two more chicken dishes.",
+                "history": [], "trace": [],
+            })
+            assert invalid["route"] == "fallback", invalid
+            assert any("#130001" in issue for issue in invalid["review"]["rule_issues"])
+            assert "#130001" not in invalid["reply"]
+            assert invalid["profile"]["allergies"] == ["peanut"]
             return first, again
         asyncio.run(run_tools())
     finally:
