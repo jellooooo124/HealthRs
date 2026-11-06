@@ -4,8 +4,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# This expensive model/data evaluation is intentionally NOT a required PR check.
+# Trigger it explicitly from GitHub Actions when comparing models.
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:
