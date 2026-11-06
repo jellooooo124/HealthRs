@@ -49,7 +49,9 @@ async def run_dialogs(out: Path, *, model: str, index: str) -> dict:
     store = make_store()
     user_id = "langgraph_llm_e2e"
     store.create(user_id)
-    store.update(user_id, conditions=[], allergies=["peanut"],
+    # Baseline scenario keeps the already-confirmed profile simple. Allergy-
+    # specific, real-ES exclusions are tested separately in test_elasticsearch_mcp_e2e.py.
+    store.update(user_id, conditions=[], allergies=[],
                  taste_prefs=["chicken", "soup"], confirmed=True)
 
     llm = ChatOpenAI(
@@ -63,8 +65,8 @@ async def run_dialogs(out: Path, *, model: str, index: str) -> dict:
     graph.max_revisions = 1
     runtime = HealthRecAgent(graph, tools, model, StateManager(str(out / "memory")))
     interactions = [
-        "Recommend two chicken dinners under 45 minutes. I have a peanut allergy.",
-        "Can you give me two other options? I want something different from the last suggestions.",
+        "Recommend two chicken dinners under 45 minutes.",
+        "Can you suggest two more chicken meals, different from the first ones?",
         # A third user turn is built below using an actual returned recipe ID.
     ]
     transcript = []
@@ -89,6 +91,9 @@ async def run_dialogs(out: Path, *, model: str, index: str) -> dict:
             "candidate_ids": [r["recipe_id"] for r in response.get("candidates", [])],
             "candidates": response.get("candidates", []),
             "review": review,
+            "draft": response.get("debug_draft", ""),
+            "profile_conditions": response.get("profile", {}).get("conditions", []),
+            "profile_allergies": response.get("profile", {}).get("allergies", []),
             "tool_names": [entry.get("tool") for block in response.get("trace", [])
                            for entry in block.get("tools", [])],
             "latency_s": round(time.perf_counter() - start, 2),
@@ -111,6 +116,8 @@ async def run_dialogs(out: Path, *, model: str, index: str) -> dict:
         assert item["review"].get("llm_passed") is not None, (
             "A REAL LLM safety reviewer must have returned a verdict", item["review"])
         assert item["assistant"].strip(), "Missing assistant reply"
+        assert item["profile_conditions"] == [] and item["profile_allergies"] == [], (
+            "The profile agent may not invent medical conditions or allergies", item)
     assert sum("recommend_recipes" in item["tool_names"] for item in transcript) >= 1, (
         "No real MCP recommend_recipes call was observed")
     assert any(item["candidate_ids"] for item in transcript), "No grounded recipe recommendations produced"
