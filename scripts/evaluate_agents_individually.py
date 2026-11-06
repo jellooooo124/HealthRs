@@ -19,6 +19,7 @@ import time
 from langchain_openai import ChatOpenAI
 
 from agent.graph import HealthRecGraph, _fill
+from agent.fact_checker import factual_claim_issues, grounded_llm_issues
 from agent.recipe_provenance import recommendation_provenance_issues
 from agent.mcp_client import load_tools
 from prototype_elasticsearch.index_recipes import index_catalog
@@ -118,7 +119,14 @@ async def evaluate(out_dir: Path, model_name: str) -> dict:
         {"user_id": user_id, "query": "", "k": 1})
     from agent.mcp_client import tool_text
     candidate = json.loads(tool_text(catalog_response))["recipes"][0]
-    facts = json.dumps([candidate], ensure_ascii=False)
+    # Match the limited factual JSON supplied by the REAL LangGraph
+    # safety-reviewer node. Previously we passed the full raw tool result,
+    # which was much longer and not representative of production.
+    allowed_fields = ("recipe_id", "name", "total_minutes", "nutrition_per_serving",
+                      "complies_with", "violations", "ingredients",
+                      "contains_user_allergens")
+    minimal_facts = {k: candidate.get(k) for k in allowed_fields}
+    facts = json.dumps([minimal_facts], ensure_ascii=False)
     base = f"Try **{candidate['name']}** (#{candidate['recipe_id']})."
     reviewer_cases = [
         ("faithful_recipe", base, True),
@@ -131,9 +139,33 @@ async def evaluate(out_dir: Path, model_name: str) -> dict:
         start = time.perf_counter()
         try:
             verdict = await graph.reviewer.ainvoke(prompt)
-            item.update({"observed_pass": verdict.passed, "ok": verdict.passed == expected,
-                         "issues": verdict.issues,
-                         "draft_quote": verdict.draft_quote, "fact_quote": verdict.fact_quote})
+            # Report BOTH the raw model quality and the production system's
+            # evidence-backed decision, never conflating the two. A small
+            # model may hallucinate a critique; that is recorded as failure
+            # even when independent verifiers prevent false rejection.
+            trusted_profile = store.get(user_id)
+            blocking, advisory = grounded_llm_issues(
+                verdict.issues if not verdict.passed else [],
+                verdict.draft_quote, verdict.fact_quote, draft, facts,
+                trusted_profile,
+            )
+            verified_issues = (
+                recommendation_provenance_issues(draft, [candidate])
+                + factual_claim_issues(draft, [minimal_facts], trusted_profile)
+                + blocking
+            )
+            verified_pass = not verified_issues
+            item.update({
+                "observed_pass": verdict.passed,
+                "raw_llm_ok": verdict.passed == expected,
+                "verified_pass": verified_pass,
+                "ok": verified_pass == expected,
+                "issues": verdict.issues,
+                "system_blocking_issues": verified_issues,
+                "advisory_llm_issues": advisory,
+                "draft_quote": verdict.draft_quote,
+                "fact_quote": verdict.fact_quote,
+            })
         except Exception as exc:
             item.update({"ok": False, "error": type(exc).__name__ + ": " + str(exc)[:250]})
         item["seconds"] = round(time.perf_counter() - start, 2)
@@ -143,9 +175,17 @@ async def evaluate(out_dir: Path, model_name: str) -> dict:
     counts = {stage: {"passed": sum(bool(x.get("ok")) for x in report[stage]),
                       "total": len(report[stage])}
               for stage in ("profile_cases", "recommender_cases", "reviewer_cases")}
+    counts["reviewer_raw_llm"] = {
+        "passed": sum(bool(x.get("raw_llm_ok")) for x in report["reviewer_cases"]),
+        "total": len(report["reviewer_cases"]),
+    }
     report["summary"] = counts
     report["quality_passed"] = all(
-        counts[key]["passed"] == counts[key]["total"] for key in counts)
+        counts[key]["passed"] == counts[key]["total"] for key in
+        ("profile_cases", "recommender_cases", "reviewer_cases"))
+    report["raw_reviewer_quality_passed"] = (
+        counts["reviewer_raw_llm"]["passed"] == counts["reviewer_raw_llm"]["total"]
+    )
     (out_dir / "results.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     lines = [
         "# Individual agent evaluation (real local LLM)", "",
@@ -154,6 +194,8 @@ async def evaluate(out_dir: Path, model_name: str) -> dict:
         *[f"| {k.replace('_cases','')} | {v['passed']} | {v['total']} |"
           for k,v in counts.items()], "",
         f"**All quality criteria passed:** {report['quality_passed']}", "",
+        "Reviewer = evidence-verified final outcome; reviewer_raw_llm = raw LLM judgement.",
+        "These are deliberately distinct: system checks may catch model errors.",
         "A successful evaluation *execution* is not proof of model accuracy.",
         "See results.json for every failure, returned draft and LLM verdict.",
     ]
