@@ -18,7 +18,7 @@ HealthRec combines two complementary experiences: the **original CA6124 conversa
 | Search index | Food.com data for ML; Chroma for guidelines | Elasticsearch recipe index with nutrition fields, conditions and allergen labels |
 | Transparency | Trace of agent reasoning and tool calls | Explicit ranking components/weights, reasons and retrieval candidate count |
 
-**Important:** the Elasticsearch path is a **separate demo/API**, not yet connected as a replacement for the existing LangGraph `recommend_recipes` MCP tool. Chroma remains the original dietary-guideline RAG store. Original offline performance numbers below describe the **baseline**, not a measured 2.0 improvement.
+**Integration update:** The Elasticsearch path can now serve the original LangGraph `recommend_recipes` MCP tool with `HEALTHREC_RETRIEVAL_BACKEND=elasticsearch`. The default remains `legacy`, preserving the original recommender and previously reported team experiments. The original dietary-guideline RAG remains on Chroma. The Elasticsearch prototype is still NOT a clinically validated service, nor is its search relevance proven superior to the baseline.
 
 ## Architecture
 
@@ -71,6 +71,39 @@ python -m pytest prototype_elasticsearch/tests -q
 ```
 
 **Detailed installation, example API calls, score weights, API contract and limitations:** [`prototype_elasticsearch/README.md`](prototype_elasticsearch/README.md).
+
+## Using Elasticsearch with the original LangGraph chat agent
+
+The original MCP tool now has an **opt-in** Elasticsearch backend. Both search and the existing profile/feedback tools read from the same SQLite profile store; the results are normalized into the original agent/reviewer contract, including recipe IDs, nutrition and condition-compliance fields.
+
+To try the integration **with your own LLM credentials**, install the base and ES requirements, start Elasticsearch, build a sample index, and **restart any already-running MCP server** so it picks up the new environment variables:
+
+```bash
+pip install -r requirements.txt -r prototype_elasticsearch/requirements-es.txt
+docker compose -f prototype_elasticsearch/compose.yaml up -d
+python -m prototype_elasticsearch.index_recipes --source sample --recreate
+export HEALTHREC_RETRIEVAL_BACKEND=elasticsearch
+export HEALTHREC_USE_BPR=0  # sample-only environment: no trained user/model IDs
+# Set DASHSCOPE_API_KEY / DASHSCOPE_BASE_URL in your local .env, then:
+streamlit run web/app_ui.py
+```
+
+For full-data use, run `python scripts/prepare_data.py`, index with `--source processed --recreate`, and set `HEALTHREC_USE_BPR=1` if serving checkpoints exist. The MCP server started by `agent/mcp_client.py` must be restarted when switching backends (use a new `HEALTHREC_MCP_PORT` or stop the old process). The original Streamlit chat requires the full processed catalog and LLM configuration; the *standalone* `prototype_elasticsearch/ui.py` remains a no-LLM, sample-capable search demo.
+
+The MCP `recommend_recipes` tool now accepts an optional plain-text `query` for BM25 and still supports time/calorie filters, ingredient exclusions and per-turn recipe exclusions. Categories are supported; legacy `meal_type` is currently best expressed through the text query, rather than a strict Elasticsearch category filter. When the Elasticsearch service fails, the tool reports an error; it does **not** silently fall back to unfiltered recipes.
+
+### Automated verification
+
+```bash
+# Fast tests (do not require a running Elasticsearch server)
+python -m pytest -q prototype_elasticsearch/tests tests/test_search_backend.py
+
+# REAL Elasticsearch + API + streamable MCP contract test (no LLM key required)
+docker compose -f prototype_elasticsearch/compose.yaml up -d
+python -m pytest -q -m live_es tests/test_elasticsearch_mcp_e2e.py
+```
+
+The GitHub Actions workflow `.github/workflows/healthrec-es-e2e.yml` performs indexing against a real Elasticsearch 8.x service, exercises the FastAPI endpoint, calls the same MCP tool used by LangGraph, and tests profile filters, details and feedback exclusions. This verifies the integration path without requiring a paid model API. **It does not test LLM-generated dialogue end-to-end**; that still requires configured LLM credentials and separate checks. Inspect the actual CI run before claiming it passed.
 
 ## Repository guide
 
