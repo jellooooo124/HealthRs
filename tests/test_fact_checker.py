@@ -66,3 +66,30 @@ def test_medical_treatment_advice_blocks_without_conditions():
         NO_RESTRICTIONS,
     )
     assert blocking == critique and unverified == []
+
+
+def test_reviewer_hallucinated_extra_soy_sauce_is_recorded_not_trusted():
+    """Regression from real Qwen2.5:3b: a draft invented by the reviewer itself."""
+    actual_draft = "Try **Bourbon Chicken** (#45809)."
+    critique = ["The draft tells the user to add extra soy sauce."]
+    fabricated = "Try **Bourbon Chicken** (#45809). Add extra soy sauce to enhance the flavor."
+    blocking, unverified = grounded_llm_issues(
+        critique, fabricated, '"ingredients": ["soy sauce"]',
+        actual_draft, '{"ingredients": ["soy sauce"]}',
+        NO_RESTRICTIONS,
+    )
+    assert blocking == []
+    assert unverified == critique
+
+
+def test_hallucinated_model_warning_still_blocks_for_known_allergy():
+    """Conservative safety rule must not silently release restricted profiles."""
+    critique = ["This recipe contains a possible peanut allergen."]
+    blocking, unverified = grounded_llm_issues(
+        critique, "Made up sentence", "",
+        "Try **Bourbon Chicken** (#45809).",
+        '{"contains_user_allergens": []}',
+        {"conditions": [], "allergies": ["peanut"]},
+    )
+    assert blocking == critique
+    assert unverified == []
