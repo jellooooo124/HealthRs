@@ -16,7 +16,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mcp.server.fastmcp import FastMCP  # noqa: E402
 
-from agent.recommender_service import RecommenderService  # noqa: E402
+from agent.search_backend import backend_mode, es_details, es_engine, es_recommend, es_store  # noqa: E402
+
+
+def _legacy_service():
+    from agent.recommender_service import RecommenderService
+    return RecommenderService.get()
+
+
+def _store():
+    return es_store() if backend_mode() == "elasticsearch" else _legacy_service().store
 from src.config import get_agent_config  # noqa: E402
 from src.utils.logger import get_logger, log_tool_call  # noqa: E402
 
@@ -39,12 +48,11 @@ def recommend_recipes(user_id: str, meal_type: str | None = None, max_minutes: i
                       max_calories: float | None = None,
                       categories: list[str] | None = None, include_ingredients: list[str] | None = None,
                       exclude_ingredients: list[str] | None = None, exclude_recipe_ids: list[int] | None = None,
-                      k: int = 5) -> str:
+                      k: int = 5, query: str = "") -> str:
     """
-    Personalised, health-aware recipe recommendations from the trained two-stage recommender
-    (retrieval: taste channel + healthy-popular channel -> ranking: BPR-MF with nutrition/condition
-    features -> safety rerank). The user's conditions and allergies are read from the database and
-    always applied; allergens are never returned. Returns JSON with up to k recipes and per-serving nutrition.
+    Personalised, health-aware recommendations from the active retrieval backend:
+    original BPR-MF or optional Elasticsearch BM25 and hybrid ranking.
+    Health conditions and allergies always come from the trusted profile store.
 
     Args:
         user_id: filled in by the system.
@@ -56,10 +64,13 @@ def recommend_recipes(user_id: str, meal_type: str | None = None, max_minutes: i
         exclude_ingredients: ingredients to avoid (dislikes), e.g. ["pork", "mushrooms"].
         exclude_recipe_ids: recipes to leave out (already shown or rejected).
         k: number of recipes (1-10, default 5).
+        query: free-text food search phrase from the user's latest request (Elasticsearch mode).
     """
     constraints = {"meal_type": meal_type, "max_minutes": max_minutes, "max_calories": max_calories, "categories": categories,
                    "include_ingredients": include_ingredients, "exclude_ingredients": exclude_ingredients}
-    return _dump(RecommenderService.get().recommend(user_id, constraints, k, exclude_recipe_ids))
+    if backend_mode() == "elasticsearch":
+        return _dump(es_recommend(user_id, constraints, k, exclude_recipe_ids, query))
+    return _dump(_legacy_service().recommend(user_id, constraints, k, exclude_recipe_ids))
 
 
 @mcp.tool()
@@ -73,7 +84,9 @@ def get_recipe_details(recipe_id: int, user_id: str = "") -> str:
         recipe_id: Food.com recipe id (the number cited as #id).
         user_id: filled in by the system.
     """
-    return _dump(RecommenderService.get().details(recipe_id, user_id or None))
+    if backend_mode() == "elasticsearch":
+        return _dump(es_details(recipe_id, user_id or None))
+    return _dump(_legacy_service().details(recipe_id, user_id or None))
 
 
 @mcp.tool()
@@ -86,9 +99,9 @@ def get_user_profile(user_id: str) -> str:
     Args:
         user_id: filled in by the system.
     """
-    svc = RecommenderService.get()
-    p = svc.store.get(user_id) or svc.store.create(user_id)
-    p["recent_feedback"] = svc.store.feedback(user_id)[-10:]
+    store = _store()
+    p = store.get(user_id) or store.create(user_id)
+    p["recent_feedback"] = store.feedback(user_id)[-10:]
     return _dump(p)
 
 
@@ -106,7 +119,7 @@ def update_user_profile(user_id: str, conditions: list[str] | None = None, aller
         taste_prefs: short preference phrases, e.g. ["likes Asian food", "no desserts"].
         confirmed: true once the user has told us their conditions and allergies.
     """
-    p = RecommenderService.get().store.update(user_id, conditions, allergies, taste_prefs, confirmed)
+    p = _store().update(user_id, conditions, allergies, taste_prefs, confirmed)
     return _dump({"status": "updated", "profile": p})
 
 
@@ -125,7 +138,9 @@ def record_feedback(user_id: str, recipe_id: int, signal: str, reason: str = "")
     """
     if signal not in ("like", "dislike", "cooked"):
         return _dump({"status": "error", "message": "signal must be like, dislike or cooked"})
-    RecommenderService.get().store.add_feedback(user_id, recipe_id, signal, reason)
+    if backend_mode() == "elasticsearch" and not es_engine().es.exists(index=es_engine().index, id=str(recipe_id)):
+        return _dump({"status": "error", "message": "Recipe not found in the active Elasticsearch index"})
+    _store().add_feedback(user_id, recipe_id, signal, reason)
     return _dump({"status": "recorded", "recipe_id": recipe_id, "signal": signal})
 
 
@@ -163,6 +178,7 @@ def ingest_guideline_document(path: str) -> str:
 
 
 if __name__ == "__main__":
-    RecommenderService.get()   # load models before accepting requests
+    if backend_mode() != "elasticsearch":
+        _legacy_service()  # load trained models only in legacy mode
     logger.info(f"HealthRec MCP server on http://{_cfg['host']}:{_port}/mcp")
     mcp.run(transport="streamable-http")
