@@ -100,6 +100,11 @@ def benchmark(users: int, out: Path, index: str, candidate_size: int) -> dict:
     sampled_users = rng.permutation(data.n_users).tolist()
     results = {name: {"ndcg": [], "recall": [], "latency_ms": []} for name in METHODS}
     cases = []
+    # Cache catalog eligibility OUTSIDE per-query timing; never charge BPR latency
+    # for hundreds of repeated ES document fetches.
+    eligibility_docs = es.mget(index=index, ids=[str(int(rid)) for rid in recipe_ids])["docs"]
+    allowed = np.array([bool(d.get("found") and d["_source"].get("nutrition_complete"))
+                        for d in eligibility_docs], dtype=bool)
     skipped = {"incomplete_target": 0, "no_training_query": 0, "empty_pool": 0}
     k = 10
 
@@ -164,11 +169,7 @@ def benchmark(users: int, out: Path, index: str, candidate_size: int) -> dict:
         with torch.no_grad():
             all_scores = model.full_scores(torch.tensor([uid]))[0].cpu().numpy().copy()
         all_scores[known[uid].indices] = -np.inf
-        # Match the mandatory completeness filter that ES uses.
-        # Cached ES catalog is small, and checking every document here
-        # makes the candidate universe explicitly identical.
-        allowed = np.array([bool(es.get(index=index, id=str(int(rid)))["_source"]["nutrition_complete"])
-                            for rid in recipe_ids], dtype=bool)
+        # Match the mandatory completeness filter, precomputed above.
         all_scores[~allowed] = -np.inf
         full_order = np.argsort(-all_scores, kind="stable")
         baseline_top = [int(recipe_ids[i]) for i in full_order[:k] if np.isfinite(all_scores[i])]
@@ -206,7 +207,7 @@ def benchmark(users: int, out: Path, index: str, candidate_size: int) -> dict:
             "BM25/hybrids retrieve at most candidate_size lexical matches; BPR scores full eligible catalog.",
             "The model is re-trained on the sample, not the original full-data serving checkpoint.",
             "Synthetic train-derived queries are not representative live search traffic.",
-            "P95 timing includes actual Elasticsearch calls for BM25/hybrids; BPR is local CPU plus completeness checks.",
+            "P95 includes live Elasticsearch calls for BM25/hybrids; BPR uses local CPU with precomputed eligibility.",
         ],
         "skipped": skipped, "results": aggregate, "cases": cases,
     }
