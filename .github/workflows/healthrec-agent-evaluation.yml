@@ -6,7 +6,9 @@ concurrency:
 
 # This expensive model/data evaluation is intentionally NOT a required PR check.
 # Trigger it explicitly from GitHub Actions when comparing models.
+# Single initial PR evaluation run; after obtaining report, switch back to manual-only.
 on:
+  pull_request:
   workflow_dispatch:
 
 permissions:
