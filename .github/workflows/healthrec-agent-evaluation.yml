@@ -6,9 +6,9 @@ concurrency:
 
 # This expensive model/data evaluation is intentionally NOT a required PR check.
 # Trigger it explicitly from GitHub Actions when comparing models.
-# Single initial PR evaluation run; after obtaining report, switch back to manual-only.
+# Real LLM evaluation is optional and intentionally not a required PR check.
+# Trigger it manually from GitHub Actions to preserve measurable case-level results.
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:
