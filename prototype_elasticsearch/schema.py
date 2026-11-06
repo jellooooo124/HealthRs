@@ -44,6 +44,10 @@ def number(value):
 
 
 def strings(value) -> list[str]:
+    # Parquet round-trips Food.com list columns as numpy.ndarray, whereas
+    # the raw CSV loader uses Python lists. Both must be indexable.
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        value = value.tolist()
     if not isinstance(value, (tuple, list)):
         return []
     return [html.unescape(str(x)).strip() for x in value if x is not None and str(x).strip()]
