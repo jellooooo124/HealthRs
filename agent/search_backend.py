@@ -47,7 +47,7 @@ def _compact(doc: dict, profile: dict, details: bool = False) -> dict:
         "complies_with": {c: c in (doc.get("compliant_conditions") or []) for c in conditions},
         "violations": {c: "Recipe does not meet configured rules"
                        for c in conditions if c not in (doc.get("compliant_conditions") or [])},
-        "ingredients": list(doc.get("ingredients") or [])[:30 if details else 6],
+        "ingredients": list(doc.get("ingredients") or [])[:30],
         # The safety reviewer must see the explicit per-user allergen-label
         # check, rather than guessing risk from unrelated ingredient names.
         "contains_user_allergens": sorted(
