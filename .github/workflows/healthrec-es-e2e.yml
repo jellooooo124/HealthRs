@@ -34,10 +34,10 @@ jobs:
       - name: Install only the dependencies required for live search/MCP
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r prototype_elasticsearch/requirements-es.txt "numpy>=1.26,<3" "pandas>=2.2,<4" "pyyaml>=6,<7" "mcp>=1.25,<2" "langchain-mcp-adapters>=0.1,<1"
+          python -m pip install -r prototype_elasticsearch/requirements-es.txt "numpy>=1.26,<3" "pandas>=2.2,<4" "pyyaml>=6,<7" "mcp>=1.25,<2" "langchain-mcp-adapters>=0.1,<1" "langchain>=1,<2" "langgraph>=1,<2" "langchain-openai>=1,<2"
       - name: Run original search tests and adapter contract tests
-        run: python -m pytest -q prototype_elasticsearch/tests tests/test_search_backend.py tests/test_fact_checker.py
-      - name: Run real Elasticsearch index, API and MCP end-to-end test
+        run: python -m pytest -q prototype_elasticsearch/tests tests/test_search_backend.py tests/test_fact_checker.py tests/test_health_provenance.py
+      - name: Run real Elasticsearch, API, MCP and deterministic LangGraph end-to-end tests
         env:
           ELASTICSEARCH_URL: http://127.0.0.1:9200
         run: python -m pytest -q -m live_es tests/test_elasticsearch_mcp_e2e.py
