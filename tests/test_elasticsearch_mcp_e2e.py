@@ -166,6 +166,19 @@ def test_real_elasticsearch_index_fastapi_and_mcp(tmp_path, monkeypatch):
             assert any("#130001" in issue for issue in invalid["review"]["rule_issues"])
             assert "#130001" not in invalid["reply"]
             assert invalid["profile"]["allergies"] == ["peanut"]
+
+            # A genuine first-person statement, unlike the "more recipes"
+            # request, is allowed to modify the real SQLite profile via MCP.
+            prior = json.loads(tool_text(await tools["get_user_profile"].ainvoke(
+                {"user_id": "e2e_user"})))
+            explicit = await g.profile_node({
+                "user_id": "e2e_user", "user_input": "I have a milk allergy.",
+                "profile": prior, "history": [], "trace": [],
+            })
+            assert explicit["profile"]["allergies"] == ["milk", "peanut"]
+            assert explicit["trace"][0]["health_write_policy"] == {
+                "allergies": ["milk", "peanut"],
+            }
             return first, again
         asyncio.run(run_tools())
     finally:
