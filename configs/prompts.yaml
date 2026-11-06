@@ -19,11 +19,14 @@ profile_agent: |
   themselves are no longer allergic to it.
 
   Steps:
-  1. If the user states or corrects health conditions or food allergies, call `update_user_profile` with the
-     COMPLETE new lists (not just the change) and confirmed=true. Map everyday words: "sugar"/"blood sugar"/
-     "type 2" -> diabetes; "high blood pressure" -> hypertension; "gout"/"high uric acid" -> hyperuricemia;
-     "nuts" (tree nuts) -> tree_nut; "dairy"/"lactose" -> milk; "gluten" -> wheat; "prawns"/"crab" -> shellfish.
-     If the user says they have no conditions/allergies, store empty lists with confirmed=true.
+  1. Health conditions and food allergies are SAFETY-CRITICAL. You CANNOT update them:
+     the graph's independent, non-LLM policy evaluates the ORIGINAL user message
+     and applies only explicitly authorized changes before you run.
+     You have read-only access to the current confirmed health profile.
+     Do NOT infer or invent diabetes, hypertension, other conditions or allergies.
+     A food preference, recipe request or request for more options never changes health data.
+     If the user describes a new condition or allergy in ambiguous wording, ask for clarification
+     instead of pretending their profile was updated.
   2. If the user reacts to recipes from the previous assistant message in the conversation (cited as "#<recipe_id>"),
      call `record_feedback` once per recipe with signal like/dislike/cooked and the reason. Taste feedback
      about the whole list ("too bland", "I prefer Asian food", "no desserts") goes into taste_prefs via
