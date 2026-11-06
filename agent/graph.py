@@ -32,6 +32,10 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
 from agent.fact_checker import factual_claim_issues, grounded_llm_issues
+from agent.health_write_policy import authorized_health_changes
+from agent.recipe_provenance import (
+    recommendation_provenance_issues, detail_provenance_issues, cited_recipe_ids,
+)
 from agent.mcp_client import tool_text
 from agent.middleware import AGENT_MIDDLEWARE, AgentContext
 from src.config import load_config
@@ -110,7 +114,10 @@ class HealthRecGraph:
         fallback_llms = fallback_llms or []
         middleware = AGENT_MIDDLEWARE + ([ModelFallbackMiddleware(*fallback_llms)] if fallback_llms else [])
         self.profile_agent = create_agent(
-            llm, [tools["get_user_profile"], tools["update_user_profile"], tools["record_feedback"]],
+            # Health updates are NEVER an LLM-callable tool. The graph derives
+            # explicit changes from the original user utterance and writes them
+            # before model inference, eliminating invented conditions/allergies.
+            llm, [tools["get_user_profile"], tools["record_feedback"]],
             middleware=middleware, context_schema=AgentContext,
             response_format=ToolStrategy(ProfileDecision), name="profile_agent")
         rec_tools = [tools["get_recipe_details"], tools["search_diet_guidelines"]]
@@ -144,14 +151,22 @@ class HealthRecGraph:
 
     async def profile_node(self, state: GraphState) -> dict:
         t0 = time.perf_counter()
+        trusted_changes = authorized_health_changes(state["user_input"], state["profile"])
+        profile_before_llm = state["profile"]
+        if trusted_changes:
+            await self._tool("update_user_profile", user_id=state["user_id"], **trusted_changes)
+            profile_before_llm = json.loads(await self._tool(
+                "get_user_profile", user_id=state["user_id"]))
         ctx = AgentContext(user_id=state["user_id"], system_prompt=_fill(
-            self.prompts["profile_agent"], profile=_profile_text(state["profile"])))
+            self.prompts["profile_agent"], profile=_profile_text(profile_before_llm)))
         out = await self.profile_agent.ainvoke({"messages": self._window(state)}, context=ctx)
         decision: ProfileDecision = out.get("structured_response") or ProfileDecision(intent="recommend")
         profile = json.loads(await self._tool("get_user_profile", user_id=state["user_id"]))   # may have changed
         return {"request": decision.model_dump(), "profile": profile,
                 "trace": [{"node": "profile_agent", "ms": round((time.perf_counter() - t0) * 1000),
-                           "decision": decision.model_dump(), "tools": ctx.trace}]}
+                           "decision": decision.model_dump(),
+                           "health_write_policy": trusted_changes,
+                           "tools": ctx.trace}]}
 
     def route_after_profile(self, state: GraphState) -> str:
         req = state["request"]
@@ -210,22 +225,37 @@ class HealthRecGraph:
         tool_mode = self.cfg.get("recommender_tool", True)
         # --- rule check (deterministic): recommendations must be grounded; cited recipes must be real and allergen-free
         intent = state.get("request", {}).get("intent")
-        cited = list(dict.fromkeys(int(x) for x in _CITE.findall(draft)))
-        if intent == "recommend" and tool_mode and not cands and not cited:
-            issues.append("Recommendations must come from the recommend_recipes tool; call it and cite its recipes.")
+        cited = cited_recipe_ids(draft)
+        if tool_mode and intent == "recommend":
+            issues.extend(recommendation_provenance_issues(draft, cands))
+        if tool_mode and intent == "recipe_detail":
+            issues.extend(detail_provenance_issues(
+                state["user_input"], draft, state.get("history", [])))
         facts = []
+        previous_ids = set()
+        if intent == "recipe_detail":
+            for msg in state.get("history", []):
+                if isinstance(msg, AIMessage):
+                    previous_ids.update(cited_recipe_ids(str(msg.content)))
         for rid in cited:
             if rid in by_id:
                 facts.append(by_id[rid])
                 continue
-            info = json.loads(await self._tool("get_recipe_details", recipe_id=rid, user_id=state["user_id"]))
+            # Never resolve unknown recommendation IDs from the catalog: a
+            # valid existing recipe that was NOT retrieved is still ungrounded.
+            if tool_mode and intent == "recommend":
+                continue
+            if tool_mode and intent == "recipe_detail" and rid not in previous_ids:
+                continue
+            info = json.loads(await self._tool(
+                "get_recipe_details", recipe_id=rid, user_id=state["user_id"]))
             if "error" in info:
-                issues.append(f"#{rid} is not a real recipe in the catalog; remove it.")
+                issues.append(f"#{rid} is not available in the catalog; remove it.")
                 continue
             if info.get("contains_user_allergens"):
                 issues.append(f"#{rid} ({info['name']}) contains the user's allergen(s) "
                               f"{info['contains_user_allergens']}; remove it.")
-            facts.append(info)   # e.g. a recipe recommended in an earlier turn that the user picked
+            facts.append(info)
         # Independent deterministic checks are always blocking, even if the LLM
         # reviewer incorrectly accepts the text.
         if tool_mode and intent in {"recommend", "recipe_detail"}:
