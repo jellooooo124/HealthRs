@@ -83,8 +83,10 @@ def authorized_health_changes(message: str, current: dict) -> dict:
             conditions.discard(key) if no else conditions.add(key)
 
     for key, phrase in ALLERGIES.items():
-        yes = re.search(rf"\b{POSITIVE_ALLERGY}\s+{phrase}\b", txt)
-        no = re.search(rf"\b{NEGATIVE_ALLERGY}\s+{phrase}\b", txt)
+        yes = (re.search(rf"\b{POSITIVE_ALLERGY}\s+{phrase}\b", txt) or
+               re.search(rf"\bi\s+have\s+(?:an?\s+)?{phrase}\s+allerg(?:y|ies)\b", txt))
+        no = (re.search(rf"\b{NEGATIVE_ALLERGY}\s+{phrase}\b", txt) or
+              re.search(rf"\bi\s+(?:do not|don't|no longer)\s+have\s+(?:an?\s+)?{phrase}\s+allerg(?:y|ies)\b", txt))
         if yes or no:
             allergy_changed = True
             allergies.discard(key) if no else allergies.add(key)
