@@ -1,5 +1,9 @@
 name: HealthRec Elasticsearch E2E
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
   push:
@@ -32,7 +36,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r prototype_elasticsearch/requirements-es.txt "numpy>=1.26,<3" "pandas>=2.2,<4" "pyyaml>=6,<7" "mcp>=1.25,<2" "langchain-mcp-adapters>=0.1,<1"
       - name: Run original search tests and adapter contract tests
-        run: python -m pytest -q prototype_elasticsearch/tests tests/test_search_backend.py
+        run: python -m pytest -q prototype_elasticsearch/tests tests/test_search_backend.py tests/test_fact_checker.py
       - name: Run real Elasticsearch index, API and MCP end-to-end test
         env:
           ELASTICSEARCH_URL: http://127.0.0.1:9200
