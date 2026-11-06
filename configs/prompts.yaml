@@ -56,8 +56,10 @@ recommender_agent: |
   <<request>>
   <<review>>
   Tools:
-  - recommend_recipes(constraints, k, exclude_recipe_ids): personalised recipes from the trained
-    recommender. The system already applies the user's conditions and allergies from the database.
+  - recommend_recipes(constraints, k, exclude_recipe_ids, query): personalised recipes from the
+    active retrieval backend (original recommender or Elasticsearch). Pass query as short
+    food search terms from the user's request (e.g. "chicken dinner").
+    The backend applies the user's conditions and allergies from the trusted database.
   - get_recipe_details(recipe_id): ingredients, steps and nutrition of one recipe.
   - search_diet_guidelines(query): passages from WHO/ADA/ACC-AHA/ACR guideline summaries.
   The user_id argument is filled in automatically — pass any value.
