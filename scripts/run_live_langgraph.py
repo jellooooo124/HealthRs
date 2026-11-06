@@ -42,7 +42,8 @@ async def run_dialogs(out: Path, *, model: str, index: str) -> dict:
     # agents themselves DO use the real local model.
     cfg = dict(load_config("agent_config")["pipeline"])
     cfg.update({"recommender_tool": True, "clarification": True,
-                "safety_reviewer": True, "reviewer_llm_check": True})
+                "safety_reviewer": True, "reviewer_llm_check": True,
+                "reviewer_output_method": "json_schema"})
     load_config("agent_config")["guardrails"]["llm_check"] = False
 
     store = make_store()
@@ -58,6 +59,8 @@ async def run_dialogs(out: Path, *, model: str, index: str) -> dict:
     )
     tools = await load_tools()
     graph = HealthRecGraph(tools, llm, cfg=cfg)
+    # Preserve review/revision behaviour but limit local CPU smoke-test runtime.
+    graph.max_revisions = 1
     runtime = HealthRecAgent(graph, tools, model, StateManager(str(out / "memory")))
     interactions = [
         "Recommend two chicken dinners under 45 minutes. I have a peanut allergy.",
